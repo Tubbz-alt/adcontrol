@@ -61,20 +61,25 @@ static struct KFile *spi;
 
 static void meter_read(unsigned char addr, unsigned char * data, unsigned char count)
 {
-        ADE7753_CS_LOW();
-        timer_udelay(5);
+	LOG_INFO("%s: @%#02X\n", __func__, addr);
 
-		kfile_write(spi, &addr, sizeof(char));
-        timer_udelay(5); 
+	ADE7753_CS_LOW();
+	timer_udelay(5);
 
-		kfile_read(spi, data, count*sizeof(char));
-        timer_udelay(5); 
+	kfile_write(spi, &addr, sizeof(char));
+	timer_udelay(5);
 
-		ADE7753_CS_HIGH();
+	kfile_read(spi, data, count*sizeof(char));
+	timer_udelay(5);
+
+	ADE7753_CS_HIGH();
 } 
 
 static void meter_write(unsigned char addr, unsigned char * data,unsigned char count)
 {
+
+	LOG_INFO("%s: @%#02X\n", __func__, addr);
+
 	ADE7753_CS_LOW();
 	timer_udelay(5);
 

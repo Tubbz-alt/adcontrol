@@ -20,14 +20,14 @@ static void init(void)
 	timer_init();
 	kdbg_init();
 
+	LED_INIT();
+
 	spimaster_init(&spi_port, SER_SPI);
 	ser_setbaudrate(&spi_port, 500000L);
 
-	//meter_ade7753_init((KFile *)&spi_port);
-
-	LED_INIT();
-
 	IRQ_ENABLE;
+
+	meter_ade7753_init((KFile *)&spi_port);
 
 	LED_ON();
 }
