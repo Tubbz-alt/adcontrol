@@ -45,20 +45,54 @@ uint32_t power_value;
 static void NORETURN monitor_load(void) {
 	uint32_t irms_value;
 	uint32_t max_load = 0;
-//	const uint32_t fault_load = 6000l;
-//	uint8_t count = 0;
-//	uint8_t notify = 1;
+	const uint32_t fault_load = 6000l;
+	uint8_t count = 0;
+	uint8_t notify = 1;
 
-	kputs("Calibrating...");
-	//while (count++ < 10) {
-	while (1) {
+	kputs("Calibrating...\n");
+	while (count++ < 10) {
 		irms_value  = meter_ade7753_Irms();
-
-		//kprintf("C: %08ld, M: %08ld\n", irms_value, max_load);
-
-		timer_delay(1000);
+		kprintf("Irms: %08ld, Ipeak: %08ld\n", irms_value, max_load);
+		timer_delay(100);
 		LED_SWITCH();
 	}
+
+	kputs("Sensing...\n");
+	while (1) {
+
+		irms_value  = meter_ade7753_Irms();
+		kprintf("Irms: %08ld, Ipeak: %08ld\n", irms_value, max_load);
+
+		if (max_load < irms_value) {
+
+			if ( (irms_value-max_load) > fault_load)
+				max_load += (fault_load>>2);
+			else
+				max_load = irms_value;
+
+			notify = 1;
+
+		} else {
+			if ( (max_load-irms_value) > fault_load) {
+				if (notify) {
+					kprintf("Load fault (%8ld => %08ld): sending SMS notification...\n",
+								max_load, irms_value);
+					max_load = irms_value;
+					notify = 0;
+				}
+			} else {
+				if ( !(++count%10) ) {
+					kprintf("Load OK, (%8ld)\n", max_load);
+				}
+			}
+
+		}
+
+		timer_delay(500);
+		LED_SWITCH();
+	}
+
+
 
 }
 

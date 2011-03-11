@@ -161,7 +161,7 @@ uint32_t meter_ade7753_Irms() {
 			+((uint32_t)irms[1]<<8)
 			+(uint32_t)irms[2];
 
-	kprintf("Irms=0x%02X%02X%02X=%08ld\n",
+	LOG_INFO("Irms=0x%02X%02X%02X=%08ld\n",
 			irms[0], irms[1], irms[2], irms_value);
 
 	return irms_value;
