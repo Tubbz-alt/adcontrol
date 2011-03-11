@@ -116,6 +116,18 @@ void meter_ade7753_on(void);
 void meter_ade7753_off(void);
 void meter_ade7753_reset(void);
 
+typedef struct meter_conf {
+        unsigned char rev;
+        unsigned char mode[2];
+        unsigned char irqs[2];
+} meter_conf_t;
+
+void meter_ade7753_conf(meter_conf_t *conf);
+
+uint32_t meter_ade7753_Irms(void);
+void meter_ade7753_Vrms(unsigned char *sample);
+void meter_ade7753_Power(unsigned char *sample);
+
 /*
 uint8_t meter_ade7753_read_reg8u(uint8_t reg, uint8_t *data);
 uint8_t meter_ade7753_read_reg8s(uint8_t reg, int8_t *data);

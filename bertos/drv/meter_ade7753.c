@@ -64,33 +64,38 @@ static void meter_read(unsigned char addr, unsigned char * data, unsigned char c
 	LOG_INFO("%s: @%#02X\n", __func__, addr);
 
 	ADE7753_CS_LOW();
-	timer_udelay(5);
+	timer_delay(10);
 
-	kfile_write(spi, &addr, sizeof(char));
-	timer_udelay(5);
+	kfile_write(spi, &addr, 1);
+	timer_delay(10);
 
-	kfile_read(spi, data, count*sizeof(char));
-	timer_udelay(5);
+	for (int i=0; i<count; i++) { 
+		kfile_read(spi, data+i, 1);
+		timer_delay(10);
+	}
 
 	ADE7753_CS_HIGH();
 } 
 
-static void meter_write(unsigned char addr, unsigned char * data,unsigned char count)
+static void meter_write(unsigned char addr, unsigned char * data, unsigned char count)
 {
 
 	LOG_INFO("%s: @%#02X\n", __func__, addr);
 
 	ADE7753_CS_LOW();
-	timer_udelay(5);
-
+	timer_delay(10);
+	
 	addr |= 0x80;
-	kfile_write(spi, &addr, sizeof(char));
-	timer_udelay(5); 
+	kfile_write(spi, &addr, 1);
+	timer_delay(10);
 
-	kfile_write(spi, data, count*sizeof(char));
-	timer_udelay(5);
+	for (int i=0; i<count; i++) { 
+		kfile_write(spi, data+i, 1);
+		timer_delay(10);
+	}
 
 	ADE7753_CS_HIGH();
+
 }
 
 static void meter_set(uint16_t bits)
@@ -126,14 +131,80 @@ void meter_ade7753_on(void)
 	meter_clear(ADE7753_ASUSPEND);
 }
 
+void meter_ade7753_conf(meter_conf_t *conf) {
+        meter_read(ADE7753_DIEREV, &(conf->rev), 1);
+        timer_delay(5);
+        meter_read(ADE7753_MODE, conf->mode, 2);
+        timer_delay(5);
+        meter_read(ADE7753_IRQEN, conf->irqs, 2);
+        timer_delay(5);
+}
+
+//void meter_ade7753_Irms(unsigned char *sample) {
+//        meter_read(ADE7753_IRMS, sample, 3);
+//}
+
+void meter_ade7753_Vrms(unsigned char *sample) {
+        meter_read(ADE7753_VRMS, sample, 3);
+}
+
+void meter_ade7753_Power(unsigned char *sample) {
+        meter_read(ADE7753_WAVEFORM, sample, 3);
+}
+
+uint32_t meter_ade7753_Irms() {
+	unsigned char irms[3];
+	uint32_t irms_value;
+
+    meter_read(0x16, irms, 3);
+	irms_value  = ((uint32_t)irms[0]<<16)
+			+((uint32_t)irms[1]<<8)
+			+(uint32_t)irms[2];
+
+	kprintf("Irms=0x%02X%02X%02X=%08ld\n",
+			irms[0], irms[1], irms[2], irms_value);
+
+	return irms_value;
+}
+
+
+
+
 /**
  * Reset 
  */
+//void meter_ade7753_reset(void)
+//{
+//	LOG_INFO("Reset...\n");
+//	meter_set(ADE7753_SWRST);
+//	timer_udelay(500);
+//}
+//
 void meter_ade7753_reset(void)
 {
-	LOG_INFO("Reset...\n");
-	meter_set(ADE7753_SWRST);
-	timer_udelay(500);
+	unsigned char conf[2] = {
+		0x00,0x00};
+
+	// Software reset
+	conf[0] = 0x00;
+	conf[1] = 0x40;
+	meter_write(0x09, conf, 2);
+	timer_delay(100);
+
+	// Load conf
+	//conf[0] = 0x00;
+	conf[0] = 0x00; // CH2 on waveform register
+	conf[1] = 0x0C;
+	meter_write(0x09, conf, 2);
+	//      conf[1] = (_BV(SWRST) | _BV(DISCF) | _BV(DISSAG));
+	//      meter_write(MODE, conf, 2);
+	timer_delay(100);
+
+	// Enable all interrupts
+	conf[0] = 0xFF;
+	conf[1] = 0xFF;
+	meter_write(0x0A, conf, 2);
+
 }
 
 MOD_DEFINE(meter_ade7753)

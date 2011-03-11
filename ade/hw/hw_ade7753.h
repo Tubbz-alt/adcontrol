@@ -38,6 +38,8 @@
 #ifndef HW_ADE7753_H
 #define HW_ADE7753_H
 
+#include <avr/io.h>
+
 #include "cfg/macros.h"   /* BV() */
 
 
@@ -59,8 +61,14 @@
  */
 #define ADE7753_RESET_HIGH()     do { /* Implement me! */ } while (0)
 #define ADE7753_RESET_LOW()      do { /* Implement me! */ } while (0)
-#define ADE7753_CS_HIGH()        do { /* Implement me! */ } while (0)
-#define ADE7753_CS_LOW()         do { /* Implement me! */ } while (0)
+#define ADE7753_CS_HIGH()        do {\
+	PORTB |= _BV(PB4);\
+	PORTC &= ~_BV(PC2);\
+} while(0)
+#define ADE7753_CS_LOW()         do {\
+	PORTB &= ~_BV(PB4);\
+	PORTC |= _BV(PC2);\
+} while(0)
 /*@}*/
 
 /**

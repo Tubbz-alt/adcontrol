@@ -49,7 +49,7 @@
  * $WIZ$ type = "enum"
  * $WIZ$ value_list = "log_level"
  */
-#define ADE7753_LOG_LEVEL      LOG_LVL_INFO
+#define ADE7753_LOG_LEVEL      LOG_LVL_NONE
 
 /**
  * Module logging format.
