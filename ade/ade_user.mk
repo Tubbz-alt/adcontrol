@@ -9,6 +9,8 @@ ade_PROGRAMMER_PORT = none
 
 # Files included by the user.
 ade_USER_CSRC = \
+	$(ade_SRC_PATH)/command.c \
+	$(ade_SRC_PATH)/console.c \
 	$(ade_SRC_PATH)/main.c \
 	#
 
