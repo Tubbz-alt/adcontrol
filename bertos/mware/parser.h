@@ -182,6 +182,5 @@ bool parser_get_cmd_arguments(const char* line, const struct CmdTemplate* templ,
  */
 bool parser_get_cmd_id(const char* line, unsigned long* ID);
 
-
 #endif /* MWARE_PARSER_H */
 

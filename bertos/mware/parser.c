@@ -63,9 +63,6 @@
 #include <stdlib.h> // atol(), NULL
 #include <string.h> // strchr(), strcmp()
 
-//TODO:
-#define CONFIG_INTERNAL_COMMANDS  0
-
 #define ARG_SEP_S " "
 #define ARG_SEP_C ' '
 
@@ -271,6 +268,7 @@ const char* parser_rl_match(UNUSED_ARG(void *,dummy), const char *word, int word
 	return found;
 }
 
+#if CONFIG_PARSER_USE_ID
 bool parser_get_cmd_id(const char* line, unsigned long* ID)
 {
 	const char *begin = line, *end = line;
@@ -286,6 +284,7 @@ bool parser_get_cmd_id(const char* line, unsigned long* ID)
 
 	return true;
 }
+#endif
 
 const struct CmdTemplate* parser_get_cmd_template(const char *input)
 {
@@ -293,9 +292,11 @@ const struct CmdTemplate* parser_get_cmd_template(const char *input)
 //	int cmdlen;
 	const char *begin = input, *end = input;
 
+#if CONFIG_PARSER_USE_ID
 	// Skip the ID, and get the command
 	if (!get_word(&begin, &end))
 		return NULL;
+#endif
 	if (!get_word(&begin, &end))
 		return NULL;
 
@@ -306,9 +307,11 @@ static const char *skip_to_params(const char *input, const struct CmdTemplate *c
 {
 	const char *begin = input, *end = input;
 
+#if CONFIG_PARSER_USE_ID
 	// Skip the ID, and get the command
 	if (!get_word(&begin, &end))
 		return NULL;
+#endif
 	if (!get_word(&begin, &end))
 		return NULL;
 
