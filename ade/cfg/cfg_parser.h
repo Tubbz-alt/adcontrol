@@ -38,7 +38,20 @@
 #ifndef CFG_PARSER_H
 #define CFG_PARSER_H
 
+/**
+ * Use commands IDs.
+ * $WIZ$ type = "boolean"
+ * $WIZ$ supports = "True"
+ */
+#define CONFIG_PARSER_USE_ID   0
 
+
+/**
+ * Add internal defined commands.
+ * $WIZ$ type = "boolean"
+ * $WIZ$ supports = "False"
+ */
+#define CONFIG_INTERNAL_COMMANDS  0
 
 #endif /* CFG_PARSER_H */
 
