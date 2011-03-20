@@ -148,6 +148,11 @@ static bool parseArgs(const char *fmt, const char *input, parms argv[])
 				(*argv++).s = begin;
 				break;
 
+			case 't':
+				(*argv++).s = begin;
+				// Return a pointer to the remaing input text
+				return  true;
+
 			default:
 				ASSERT2(0, "Unknown format for argument");
 				return false;
