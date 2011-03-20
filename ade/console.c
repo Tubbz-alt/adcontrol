@@ -12,7 +12,7 @@
 
 
 // DEBUG: set to 1 to force interactive mode
-#define FORCE_INTERACTIVE         1
+#define FORCE_INTERACTIVE         0
 
 /**
  * True if we are in interactive mode, false if we are in console mode.

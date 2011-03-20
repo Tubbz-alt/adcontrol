@@ -11,6 +11,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Define logging settingl (for cfg/log.h module).
+#define LOG_LEVEL   LOG_LVL_INFO
+#define LOG_FORMAT  LOG_FMT_TERSE
+#include <cfg/log.h>
+
 /*
  * Commands.
  * TODO: Command declarations and definitions should be in another file(s).
@@ -53,12 +58,115 @@ MAKE_CMD(reset, "", "",
 }), 0)
 
 
+//----- CMD: PRINT HELP (console only)
+MAKE_CMD(help, "", "",
+({
+	(void)args;
+	LOG_INFO("%s", __func__);
+
+	RC_OK;
+}), 0)
+
+//----- CMD: NUMBER ADD
+MAKE_CMD(add, "ds", "",
+({
+	(void)args;
+	LOG_INFO("%s: %d %s", __func__, args[1].l, args[2].s);
+
+	RC_OK;
+}), 0)
+
+//----- CMD: NUMBER DEL
+MAKE_CMD(del, "d", "",
+({
+	(void)args;
+	LOG_INFO("%s: %d", __func__, args[1].l);
+
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: NUMBER SHOW
+MAKE_CMD(num, "", "s",
+({
+	(void)args;
+	LOG_INFO("%s", __func__);
+
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: MESSAGE SET
+MAKE_CMD(msg, "t", "",
+({
+	(void)args;
+	LOG_INFO("%s: %s", __func__, args[1].s);
+
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: RESET
+MAKE_CMD(rst, "", "",
+({
+	(void)args;
+	LOG_INFO("%s", __func__);
+
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: MODE CALIBRATION
+MAKE_CMD(cal, "", "",
+({
+	(void)args;
+	LOG_INFO("%s", __func__);
+
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: MODE MONITORING
+MAKE_CMD(go, "", "",
+({
+	(void)args;
+	LOG_INFO("%s", __func__);
+
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: STATUS
+MAKE_CMD(sta, "", "s",
+({
+	(void)args;
+	LOG_INFO("%s", __func__);
+
+	RC_OK;
+}), 0)
+;
+
+
+
+
+
+
 /* Register commands.  */
 void command_init(void) {
 	REGISTER_CMD(ver);
 	REGISTER_CMD(sleep);
 	REGISTER_CMD(ping);
 	REGISTER_CMD(reset);
+
+	REGISTER_CMD(help);
+	REGISTER_CMD(add);
+	REGISTER_CMD(del);
+	REGISTER_CMD(num);
+	REGISTER_CMD(msg);
+	REGISTER_CMD(rst);
+	REGISTER_CMD(cal);
+	REGISTER_CMD(go);
+	REGISTER_CMD(sta);
 }
 
 /**
