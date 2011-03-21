@@ -1,5 +1,6 @@
 
 #include "console.h"
+#include "eeprom.h"
 
 #include "hw/hw_led.h"
 
@@ -50,8 +51,9 @@ int main(void) {
 	ser_setbaudrate(&spi_port, 500000L);
 	//meter_ade7753_init((KFile *)&spi_port);
 
-	console_init(&dbg_port.fd);
+	ee_dumpConf(&dbg_port.fd);
 
+	console_init(&dbg_port.fd);
 	while(1) {
 		console_run(&dbg_port.fd);
 	}

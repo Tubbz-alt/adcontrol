@@ -4,13 +4,14 @@
 #
 
 # Programmer interface configuration, see http://dev.bertos.org/wiki/ProgrammerInterface for help
-ade_PROGRAMMER_TYPE = none
-ade_PROGRAMMER_PORT = none
+ade_PROGRAMMER_TYPE = avrispmkII
+ade_PROGRAMMER_PORT = usb
 
 # Files included by the user.
 ade_USER_CSRC = \
 	$(ade_SRC_PATH)/command.c \
 	$(ade_SRC_PATH)/console.c \
+	$(ade_SRC_PATH)/eeprom.c \
 	$(ade_SRC_PATH)/main.c \
 	#
 
