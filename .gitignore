@@ -1,3 +1,5 @@
 cscope.*
 .*.swp
 buildrev.h
+*.eep
+*.log
