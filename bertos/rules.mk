@@ -89,7 +89,7 @@ else
         #use embedded specific map flags
         $(1)_MAP_FLAGS = $$(MAP_FLAGS_EMB)
         #In embedded we need s19, hex and bin
-        $$(OUTDIR)/$(1).tgt : $$(OUTDIR)/$(1).s19 $$(OUTDIR)/$(1).hex $$(OUTDIR)/$(1).bin
+        $$(OUTDIR)/$(1).tgt : $$(OUTDIR)/$(1).s19 $$(OUTDIR)/$(1).hex $$(OUTDIR)/$(1).bin $$(OUTDIR)/$(1).rom
 endif
 
 $(1)_LDFLAGS += $$($(1)_MAP_FLAGS)
@@ -325,19 +325,20 @@ fuses_$(1):
 	fi
 
 $$(OUTDIR)/$(1).hex: $$(OUTDIR)/$(1).elf
-	$$($(1)_OBJCOPY) -O ihex $$< $$@
+	$$($(1)_OBJCOPY) -j .text -j .data -j .bss -O ihex $$< $$@
 
 $$(OUTDIR)/$(1).s19: $$(OUTDIR)/$(1).elf
-	$$($(1)_OBJCOPY) -O srec $$< $$@
+	$$($(1)_OBJCOPY) -j .text -j .data -j .bss -O srec $$< $$@
 
 $$(OUTDIR)/$(1).bin: $$(OUTDIR)/$(1).elf
-	$$($(1)_OBJCOPY) -O binary $$< $$@
+	$$($(1)_OBJCOPY) -j .text -j .data -j .bss -O binary $$< $$@
 
 $$(OUTDIR)/$(1).obj: $$(OUTDIR)/$(1).elf
 	$$($(1)_OBJCOPY) -O avrobj $$< $$@
 
 $$(OUTDIR)/$(1).rom: $$(OUTDIR)/$(1).elf
 	$$($(1)_OBJCOPY) -O $$(FORMAT) $$< $$@
+	$$($(1)_OBJCOPY) -j .eeprom --no-change-warnings --change-section-lma .eeprom=0 -O ihex $$< $$(@:.rom=.eep)
 #	$$($(1)_OBJCOPY) -j .eeprom --set-section-flags=.eeprom="alloc,load" -O $$(FORMAT) $$< $$(@:.rom=.eep)
 
 endef
