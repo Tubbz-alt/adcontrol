@@ -9,15 +9,16 @@
 #define LOG_FORMAT  LOG_FMT_TERSE
 #include <cfg/log.h>
 
+#define CONSOLE_BUFFER_SIZE 100
+
 static void console_prompt(KFile *fd) {
 	kfile_print(fd, "$ ");
 }
 
 void console_run(KFile *fd) {
-	static char linebuf[80];
-	const char *buf;
+	static char linebuf[CONSOLE_BUFFER_SIZE];
 
-	kfile_gets(fd, linebuf, sizeof(linebuf));
+	kfile_gets(fd, linebuf, CONSOLE_BUFFER_SIZE);
 	kfile_clearerr(fd);
 
 	if (linebuf[0]!='\0' && linebuf[0]!='#')
@@ -25,6 +26,7 @@ void console_run(KFile *fd) {
 
 	console_prompt(fd);
 }
+
 
 /* Initialization: readline context, parser and register commands.  */
 void console_init(KFile *fd) {

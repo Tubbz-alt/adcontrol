@@ -10,15 +10,17 @@
 
 #define MAX_MSG_TEXT	100
 
+#define EMPTY_NUMBER "-\0"
+
 typedef struct eeprom_conf {
 	char sms_dest[MAX_SMS_DEST][MAX_SMS_NUM];
 	char sms_mesg[MAX_MSG_TEXT];
 } eeprom_conf_t;
 
 int8_t ee_getSmsDest(uint8_t pos, char *num, uint8_t count);
-int8_t ee_setSmsDest(uint8_t pos, char *num, uint8_t count);
+int8_t ee_setSmsDest(uint8_t pos, const char *num);
 int8_t ee_getSmsText(char *buf, uint8_t count);
-int8_t ee_setSmsText(char *buf, uint8_t count);
+int8_t ee_setSmsText(const char *buf);
 
 void ee_dumpConf(KFile *fd);
 

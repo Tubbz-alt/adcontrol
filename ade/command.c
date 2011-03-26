@@ -1,5 +1,6 @@
 
 #include "command.h"
+#include "eeprom.h"
 
 #include "cmd_ctor.h"  // MAKE_CMD, REGISTER_CMD
 #include "verstag.h"
@@ -61,8 +62,7 @@ MAKE_CMD(reset, "", "",
 //----- CMD: PRINT HELP (console only)
 MAKE_CMD(help, "", "",
 ({
-	(void)args;
-	LOG_INFO("%s", __func__);
+	LOG_INFO("%s", args[0].s);
 
 	RC_OK;
 }), 0)
@@ -70,18 +70,18 @@ MAKE_CMD(help, "", "",
 //----- CMD: NUMBER ADD
 MAKE_CMD(add, "ds", "",
 ({
-	(void)args;
-	LOG_INFO("%s: %d %s", __func__, args[1].l, args[2].s);
-
+	LOG_INFO("%s: Pos(%02ld) Num(%s)[%d]\n",
+		args[0].s, args[1].l, args[2].s, strlen(args[2].s));
+	ee_setSmsDest(args[1].l, args[2].s);
 	RC_OK;
 }), 0)
 
 //----- CMD: NUMBER DEL
 MAKE_CMD(del, "d", "",
 ({
-	(void)args;
-	LOG_INFO("%s: %d", __func__, args[1].l);
-
+	LOG_INFO("%s: Pos(%02ld)\n",
+		args[0].s, args[1].l);
+	ee_setSmsDest(args[1].l, EMPTY_NUMBER);
 	RC_OK;
 }), 0)
 ;
@@ -89,28 +89,46 @@ MAKE_CMD(del, "d", "",
 //----- CMD: NUMBER SHOW
 MAKE_CMD(num, "", "s",
 ({
-	(void)args;
-	LOG_INFO("%s", __func__);
+	char buff[MAX_SMS_NUM];
+
+	LOG_INFO("%s:\n",
+		args[0].s);
+
+	for (uint8_t i=0; i<MAX_SMS_DEST; i++) {
+		ee_getSmsDest(i, buff, MAX_SMS_NUM);
+		LOG_INFO("SMS[%d]: %s\r\n", i, buff);
+		timer_delay(5);
+	}
 
 	RC_OK;
 }), 0)
 ;
 
 //----- CMD: MESSAGE SET
-MAKE_CMD(msg, "t", "",
+MAKE_CMD(msgw, "t", "",
 ({
-	(void)args;
-	LOG_INFO("%s: %s", __func__, args[1].s);
-
+	LOG_INFO("%s: Text(%s)",
+		args[0].s, args[1].s);
+	ee_setSmsText(args[1].s);
 	RC_OK;
 }), 0)
 ;
 
+//----- CMD: MESSAGE GET
+MAKE_CMD(msgr, "", "s",
+({
+	char buff[MAX_MSG_TEXT];
+
+	ee_getSmsText(buff, MAX_MSG_TEXT);
+	LOG_INFO("%s: Text(%s)",
+		args[0].s, buff);
+	RC_OK;
+}), 0)
+;
 //----- CMD: RESET
 MAKE_CMD(rst, "", "",
 ({
-	(void)args;
-	LOG_INFO("%s", __func__);
+	LOG_INFO("%s", args[0].s);
 
 	RC_OK;
 }), 0)
@@ -119,8 +137,7 @@ MAKE_CMD(rst, "", "",
 //----- CMD: MODE CALIBRATION
 MAKE_CMD(cal, "", "",
 ({
-	(void)args;
-	LOG_INFO("%s", __func__);
+	LOG_INFO("%s", args[0].s);
 
 	RC_OK;
 }), 0)
@@ -129,8 +146,7 @@ MAKE_CMD(cal, "", "",
 //----- CMD: MODE MONITORING
 MAKE_CMD(go, "", "",
 ({
-	(void)args;
-	LOG_INFO("%s", __func__);
+	LOG_INFO("%s", args[0].s);
 
 	RC_OK;
 }), 0)
@@ -139,16 +155,11 @@ MAKE_CMD(go, "", "",
 //----- CMD: STATUS
 MAKE_CMD(sta, "", "s",
 ({
-	(void)args;
-	LOG_INFO("%s", __func__);
+	LOG_INFO("%s", args[0].s);
 
 	RC_OK;
 }), 0)
 ;
-
-
-
-
 
 
 /* Register commands.  */
@@ -162,7 +173,8 @@ void command_init(void) {
 	REGISTER_CMD(add);
 	REGISTER_CMD(del);
 	REGISTER_CMD(num);
-	REGISTER_CMD(msg);
+	REGISTER_CMD(msgw);
+	REGISTER_CMD(msgr);
 	REGISTER_CMD(rst);
 	REGISTER_CMD(cal);
 	REGISTER_CMD(go);
@@ -208,6 +220,7 @@ static bool command_reply(KFile *fd, const struct CmdTemplate *t,
 void command_parse(KFile *fd, const char *buf) {
 
 	const struct CmdTemplate *templ;
+	parms args[PARSER_MAX_ARGS];
 
 	/* Command check.  */
 	templ = parser_get_cmd_template(buf);
@@ -215,8 +228,6 @@ void command_parse(KFile *fd, const char *buf) {
 		kfile_print(fd, "-1 Invalid command.\r\n");
 		return;
 	}
-
-	parms args[PARSER_MAX_ARGS];
 
 	/* Args Check.  TODO: Handle different case. see doc/PROTOCOL .  */
 	if (!parser_get_cmd_arguments(buf, templ, args)) {
@@ -228,156 +239,11 @@ void command_parse(KFile *fd, const char *buf) {
 	if(!parser_execute_cmd(templ, args)) {
 		NAK(fd, "Error in executing command.");
 	}
+
 	if (!command_reply(fd, templ, args)) {
 		NAK(fd, "Invalid return format.");
 	}
 
 	return;
 }
-
-
-
-
-
-
-
-
-#if 0
-
-// Command Tempaltes
-//ResultCode cmd_add_hunk(params argv[], params results[]) {
-//   return cmd_add(argv[0].l, argv[1].l, &results[0].l);
-//}
-//
-//const struct CmdTemplate cmd_add_template =  {
-//   "add", "dd", "d", cmd_add_hunk
-//};
-
-//----- CMD: PRINT HELP (console only)
-ResultCode cmd_help_hunk(parms args_results[]) {
-	LOG_INFO("%sn", __func__);
-	return RC_OK;
-}
-const struct CmdTemplate cmd_help_template = {
-	.name = "help",
-	.arg_fmt = "",
-	.result_fmt = "",
-	.func = cmd_help_hunk
-};
-
-//----- CMD: NUMBER ADD
-ResultCode cmd_number_add_hunk(parms args_results[]) {
-	LOG_INFO("%sn", __func__);
-	return RC_OK;
-}
-const struct CmdTemplate cmd_number_add_template = {
-	.name = "ADD",
-	.arg_fmt = "ds",
-	.result_fmt = "",
-	.func = cmd_number_add_hunk
-};
-
-//----- CMD: NUMBER DEL
-ResultCode cmd_number_del_hunk(parms args_results[]) {
-	LOG_INFO("%sn", __func__);
-	return RC_OK;
-}
-const struct CmdTemplate cmd_number_del_template = {
-	.name = "DEL",
-	.arg_fmt = "d",
-	.result_fmt = "",
-	.func = cmd_number_del_hunk
-};
-
-//----- CMD: NUMBER SHOW
-ResultCode cmd_number_show_hunk(parms args_results[]) {
-	LOG_INFO("%sn", __func__);
-	return RC_OK;
-}
-const struct CmdTemplate cmd_number_show_template = {
-	.name = "NUM",
-	.arg_fmt = "",
-	.result_fmt = "s",
-	.func = cmd_number_show_hunk
-};
-
-//----- CMD: MESSAGE SET
-ResultCode cmd_message_set_hunk(parms args_results[]) {
-	LOG_INFO("%sn", __func__);
-	return RC_OK;
-}
-const struct CmdTemplate cmd_message_set_template = {
-	.name = "MSG",
-	.arg_fmt = "s",
-	.result_fmt = "",
-	.func = cmd_message_set_hunk
-};
-
-//----- CMD: RESET
-ResultCode cmd_reset_hunk(parms args_results[]) {
-	LOG_INFO("%sn", __func__);
-	return RC_OK;
-}
-const struct CmdTemplate cmd_reset_template = {
-	.name = "RST",
-	.arg_fmt = "",
-	.result_fmt = "",
-	.func = cmd_reset_hunk
-};
-
-//----- CMD: MODE CALIBRATION
-ResultCode cmd_mode_calibration_hunk(parms args_results[]) {
-	LOG_INFO("%sn", __func__);
-	return RC_OK;
-}
-const struct CmdTemplate cmd_mode_calibration_template = {
-	.name = "CAL",
-	.arg_fmt = "d",
-	.result_fmt = "",
-	.func = cmd_mode_calibration_hunk
-};
-
-//----- CMD: MODE MONITORING
-ResultCode cmd_mode_monitoring_hunk(parms args_results[]) {
-	LOG_INFO("%sn", __func__);
-	return RC_OK;
-}
-const struct CmdTemplate cmd_mode_monitoring_template = {
-	.name = "GO",
-	.arg_fmt = "",
-	.result_fmt = "",
-	.func = cmd_mode_monitoring_hunk
-};
-
-//----- CMD: STATUS
-ResultCode cmd_status_hunk(parms args_results[]) {
-	LOG_INFO("%sn", __func__);
-	return RC_OK;
-}
-const struct CmdTemplate cmd_status_template = {
-	.name = "STA",
-	.arg_fmt = "",
-	.result_fmt = "s",
-	.func = cmd_status_hunk
-};
-
-void cmd_parser_init(void) {
-
-	parser_init();
-
-	parser_register_cmd(&cmd_help_template);
- 	parser_register_cmd(&cmd_help_template);
- 	parser_register_cmd(&cmd_number_add_template);
- 	parser_register_cmd(&cmd_number_del_template);
- 	parser_register_cmd(&cmd_number_show_template);
- 	parser_register_cmd(&cmd_message_set_template);
- 	parser_register_cmd(&cmd_reset_template);
- 	parser_register_cmd(&cmd_mode_calibration_template);
- 	parser_register_cmd(&cmd_mode_monitoring_template);
- 	parser_register_cmd(&cmd_status_template);
-
-}
-
-#endif
-
 
