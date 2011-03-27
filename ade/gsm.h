@@ -140,8 +140,14 @@ void gsmPortingTest(Serial *port);
 /* GSM Control Interface */
 void gsmInit(Serial *port);
 void gsmReset(void);
-int8_t gsmPowerOn(uint8_t autobaud);
+int8_t gsmPowerOn(void);
 void gsmPowerOff(void);
+void gsmUpdateConf(void);
+int8_t gsmGetNetworkParameters(void);
+
+/*----- GSM SMS Interface -----*/
+int8_t gsmSMSConf(uint8_t load);
+int8_t gsmSMSSend(const char *number, const char *message);
 
 
 #if 0

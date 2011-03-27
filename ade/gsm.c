@@ -10,7 +10,9 @@
 
 #include <cfg/compiler.h>
 
-#include <string.h>
+#include <mware/sprintf.h>
+
+//#include <string.h>
 #include <avr/pgmspace.h>
 
 /* Define logging settings (for cfg/log.h module). */
@@ -25,10 +27,6 @@
 # define gsmDebug(STR, ...)
 #endif
 
-
-#define gsmReadLine(BUFF,LEN) kfile_read(&(gsm->fd), (void*)BUFF ,LEN)
-#define gsmPrintLine(BUFF) kfile_write(&(gsm->fd), (const void*)BUFF, strlen(BUFF))
-//#define gsmPrintData(BUFF,LEN) printData(UART1,BUFF,LEN)
 #define gsmFlush() ser_purge(gsm);
 
 
@@ -68,14 +66,12 @@ void gsmInit(Serial *port) {
 		
 	LOG_INFO("GSM: Init\n");
 	gsm_init();
-	gsmDebug("DONE\n");
 }
 
 void gsmReset(void)
 {
 	LOG_INFO("GSM: Reset\n");
 	gsm_reset();
-	gsmDebug("DONE\n");
 }
 
 
@@ -118,7 +114,6 @@ static int8_t gsmAutobaud(void)
 static int8_t gsmConfigure(void)
 {
 	char buff[16];
-	int8_t try;
 	int8_t resp;
 
 	// Load configuration
@@ -140,7 +135,7 @@ static int8_t gsmConfigure(void)
 	return OK;
 }
 
-int8_t gsmPowerOn(uint8_t autobaud)
+int8_t gsmPowerOn(void)
 {
 	int8_t result;
 
@@ -169,6 +164,146 @@ void gsmPowerOff(void)
 	gsmDebug("DONE\n");
 }
 
+
+/*----- GSM ConfigurationInterface -----*/
+
+int8_t gsmGetNetworkParameters(void)
+{
+	int8_t resp;
+	char buff[64];
+
+	// Request TA Serial Number Identification(IMEI)
+	_gsmWriteLine("AT+CENG=1,1", 1000);
+	_gsmRead(buff, 64);
+	resp = _gsmReadResult();
+	if (resp != OK )
+		return -1;
+
+	_gsmWriteLine("AT+CENG?", 1000);
+	// Blow-up unnedded lines
+	_gsmRead(buff, 64);
+	// Get current cell
+	_gsmRead(buff, 64);
+#if 0
+	resp = sscanf(buff+9,
+			"%5u,%3hhu,%3hhu,%5u,%5u,%3hhu,%4x,%5u,%3hhu,%3hhu,%3hhu",
+			&gsmConf.cell.neigh[0].arfcn,
+			&gsmConf.cell.neigh[0].rxl,
+			&gsmConf.cell.rxq,
+			&gsmConf.cell.mcc,
+			&gsmConf.cell.mnc,
+			&gsmConf.cell.neigh[0].bsic,
+			&gsmConf.cell.cellid,
+			&gsmConf.cell.neigh[0].lac,
+			&gsmConf.cell.rla,
+			&gsmConf.cell.txp,
+			&gsmConf.cell.ta
+		);
+	if (resp>=11)
+		gsmConf.validCellInfo = 1;
+	else
+		gsmConf.validCellInfo = 0;
+#else
+#warning FIXME update valid cells info
+#endif
+	// get neighburing cell
+	_gsmRead(buff, 64);
+	_gsmRead(buff, 64);
+	_gsmRead(buff, 64);
+	_gsmRead(buff, 64);
+	_gsmRead(buff, 64);
+	_gsmRead(buff, 64);
+	// NOTE: the SIM900 seem to be broken, the 'OK' string is not returned
+	// as expected at the end of the neighbors inforamtion
+	_gsmReadResult();
+
+	_gsmWriteLine("AT+CMGF=1", 500);
+	_gsmReadResult();
+
+#if 0
+#ifdef CONFIG_GSM_DEBUG
+	snprintf(buff, 64, "lac: %05u, mnc: %02u, cid: 0x%02x, mcc: %u",
+			gsmConf.cell.neigh[0].lac,
+			gsmConf.cell.mnc,
+			gsmConf.cell.cellid,
+			gsmConf.cell.mcc);
+	gsmDebugLine(buff);
+#endif
+#else
+#warning FIXME add debuggin sentence
+#endif
+	return resp;
+}
+
+// Update the "Signal Quality Report"
+static uint8_t gsmUpdateCSQ(void)
+{
+	int8_t resp;
+	char buff[16];
+
+	_gsmWriteLine("AT+CSQ", 500);
+	_gsmRead(buff, 16);
+	resp = _gsmReadResult();
+	if (resp != OK) {
+		gsmConf.rssi = 99;
+		gsmConf.ber = 99;
+		return resp;
+	}
+#if 0
+	sscanf(buff, "+CSQ: %hhu,%hhu",
+			&gsmConf.rssi,
+			&gsmConf.ber);
+
+#ifdef CONFIG_GSM_DEBUG
+	sprintf(buff, "CSQ<=%02hhu,%02hhu", gsmConf.rssi, gsmConf.ber);
+	gsmDebugLine(buff);
+#endif
+#else
+#warning FIXME scan RSSI and BER values
+#endif
+
+	return resp;
+
+}
+
+void gsmUpdateConf(void)
+{
+	int8_t resp;
+
+	// Request TA Serial Number Identification(IMEI)
+	_gsmWriteLine("AT+GSN", 500);
+	_gsmRead(gsmConf.gsn, 16);
+	resp = _gsmReadResult();
+	if (resp != OK)
+		gsmConf.gsn[0] = '!';
+
+	// Request International Mobile Subscriber Identity
+	_gsmWriteLine("AT+CIMI", 500);
+	_gsmRead(gsmConf.cimi, 16);
+	resp = _gsmReadResult();
+	if (resp != OK)
+		gsmConf.cimi[0] = '!';
+
+	// Subscriber Number
+	_gsmWriteLine("AT+CCID", 500);
+	_gsmRead(gsmConf.ccid, 24);
+	resp = _gsmReadResult();
+	if (resp != OK)
+		gsmConf.ccid[0] = '!';
+
+	// Request TA Revision Identification Of Software Release
+	_gsmWriteLine("AT+GMR", 500);
+	resp = _gsmRead(gsmConf.gmr, 32);
+	if (resp<1)
+		gsmConf.gmr[0] = '!';
+
+	// Parse network parameters
+	gsmGetNetworkParameters();
+
+	// Signal Quality Report
+	gsmUpdateCSQ();
+
+}
 /*----- GSM Private methods -----*/
 
 static int8_t _gsmWriteLine(const char *cmd, uint16_t rdelay)
@@ -256,6 +391,7 @@ static inline int8_t _gsmReadResult(void)
 	return _gsmReadResultTo(3000);
 }
 
+#ifdef CONFIG_GSM_DEBUG
 static void _gsmPrintResult(uint8_t result)
 {
 	switch(result) {
@@ -295,14 +431,134 @@ static void _gsmPrintResult(uint8_t result)
 	}
 
 }
+#else
+# define _gsmPrintResult(result) do { } while(0)
+#endif
+
+
+/*----- GSM SMS Interface -----*/
+
+int8_t gsmSMSConf(uint8_t load)
+{
+	char buff[16];
+	int8_t resp;
+
+	if (load) {
+
+		// Restore SMS setting (profile 0)
+		_gsmWriteLine("AT+CRES=0", 1000);
+		resp = _gsmRead(buff, 16);
+		if (resp==-1) {
+			gsmDebug("Fail, loading SMS settings (profile 0)\n");
+			return ERROR;
+		}
+
+		return OK;
+	}
+
+	// Set text mode
+	_gsmWriteLine("AT+CMGF=1", 1000);
+	resp = _gsmRead(buff, 16);
+	if (resp==-1) {
+		gsmDebug("Fail, set Text Mode\n");
+		return ERROR;
+	}
+
+	// Select TE (GMS) Character Set
+	_gsmWriteLine("AT+CSCS=\"GSM\"", 1000);
+	resp = _gsmRead(buff, 16);
+	if (resp==-1) {
+		gsmDebug("Fail, set char set\n");
+		return ERROR;
+	}
+
+	// Set New SMS Message Indications
+	// - Forward unsolicited result codes directly to the TE
+	// - (Polling mode): No SMS-DELIVER indications are routed to the TE
+	// - No CBM indications are routed to the TE
+	// - No SMS-STATUS-REPORTs are routed to the TE
+	// - Celar TA buffer of unsolicited result codes
+	_gsmWriteLine("AT+CNMI=3,0,0,0,1", 1000);
+	resp = _gsmRead(buff, 16);
+	if (resp==-1) {
+		gsmDebug("Fail, set Indications\n");
+		return ERROR;
+	}
+
+/*
+	// Preferred SMS Message Storage
+	_gsmWriteLine("AT+CPMS=1",1000);
+	resp = _gsmRead(buff, 16);
+	if (resp==-1) {
+		gsmDebugLine("Fail, set Indications");
+		return ERROR;
+	}
+*/
+
+	// Set +CSCB
+
+	// Save SMS Settings (profile "0")
+	_gsmWriteLine("AT+CSAS=0", 1000);
+	resp = _gsmRead(buff, 16);
+	if (resp==-1) {
+		gsmDebug("Fail, save settings\n");
+		return ERROR;
+	}
+
+	return OK;
+}
+int8_t gsmSMSSend(const char *number, const char *message)
+{
+	int8_t resp;
+	char buff[32];
+
+	gsmDebug("Sending SMS\n");
+#if 0
+	if (strlen(message)>160)
+		message[160] = 0;
+#else
+#warning CHECK for message max length!!!
+#endif
+	// Sending destination number
+	sprintf(buff, "AT+CMGS=\"%s\", 145", number);
+	_gsmWriteLine(buff, 1000);
+	//_gsmWriteLine("AT+CMGS=\"", 0);
+	//_gsmWriteLine(number, 0);
+	//_gsmWriteLine("\", 145", 1000);
+	_gsmRead(buff, 32);
+
+	// Sending message
+	_gsmWriteLine(message, 1000);
+
+	// Sending terminator
+	_gsmWriteLine("\x1a", 1000);
+
+	// Waiting send confirmation
+	_gsmReadTo(buff, 32, 15000);
+	resp = _gsmReadResult();
+
+	return resp;
+}
+
+
+
+
 
 
 
 
 void gsmPortingTest(Serial *port) {
 	gsmInit(port);
-	gsmPowerOn(1);
+	gsmPowerOn();
+
+	//gsmUpdateConf();
+	//timer_delay(1000);
+
+	gsmSMSConf(0);
 	timer_delay(5000);
+	gsmSMSSend("+393473153808", "Test message from RFN");
+
+	timer_delay(15000);
 	gsmPowerOff();
 }
 
@@ -329,35 +585,7 @@ void gsmPortingTest(Serial *port) {
 
 #if 0
 
-#define gsmReadLineTo(BUFF,LEN,TO) readLineT(COM_UART,BUFF,LEN,TO)
-#define gsmPrintLine(BUFF) printLine(COM_UART,BUFF)
-#define gsmPrintData(BUFF,LEN) printData(COM_UART,BUFF,LEN)
-#define gsmFlush() flush(COM_UART);
 
-
-
-
-/*----- GSM Private methods -----*/
-
-static int8_t _gsmWriteLine(char *cmd, uint16_t rdelay)
-{
-	// NOTE: debugging should no be mixed to modem command and response to
-	// avoid timeing issues and discrepancy between debug and release
-	// versions
-	gsmDebugStr("TXa [");
-	_gsmDebugStr(cmd);
-	_gsmDebugLine("]");
-
-	// Sending the AT command
-	gsmPrintLine(cmd);
-
-	// Some commands could require a fixed delay to have a complete
-	// response; for example the intial autobauding command
-	if (rdelay)
-		delay(rdelay);
-
-	return 0;
-}
 
 static int8_t _gsmWriteData(uint8_t *data, uint8_t len, uint16_t rdelay)
 {
@@ -379,33 +607,6 @@ static int8_t _gsmWriteData(uint8_t *data, uint8_t len, uint16_t rdelay)
 	return 0;
 }
 
-static int8_t _gsmReadTo(char *resp, uint8_t size, uint16_t to)
-{
-	int8_t len = 0;
-
-	if (!resp)
-		return -1;
-
-	// Init response vector
-	resp[0]=0;
-
-	gsmDebugStr("RX [");
-
-	len = gsmReadLineTo(resp, size, to);
-
-	_gsmDebugStr(resp);
-	_gsmDebugLine("]");
-
-	return len;
-
-}
-
-static inline int8_t _gsmRead(char *resp, uint8_t size)
-{
-	// get a response with the default timeout of 3s
-	return _gsmReadTo(resp, size, 3000);
-}
-
 
 #ifdef CONFIG_GSM_DEBUG
 // This is an endless loop polling the modem for generated messages
@@ -419,176 +620,11 @@ static void _gsmReadLoop(void)
 	}
 }
 
-static void _gsmPrintResult(uint8_t result)
-{
-	char resp[] = "00: ";
-
-	resp[1] += result;
-	gsmDebugStr(resp);
-
-	switch(result) {
-	case 0:
-		_gsmDebugLine("OK");
-		break;
-	case 1:
-		_gsmDebugLine("CONNECT");
-		break;
-	case 2:
-		_gsmDebugLine("RING");
-		break;
-	case 3:
-		_gsmDebugLine("NO CARRIER");
-		break;
-	case 4:
-		_gsmDebugLine("ERROR");
-		break;
-	case 6:
-		_gsmDebugLine("NO DIALTONE");
-		break;
-	case 7:
-		_gsmDebugLine("BUSY");
-		break;
-	case 8:
-		_gsmDebugLine("NO ANSWER");
-		break;
-	case 9:
-		_gsmDebugLine("PROCEEDING");
-		break;
-	case 10:
-		_gsmDebugLine("NO RESPONSE");
-		break;
-	default:
-		_gsmDebugLine("UNDEF");
-		break;
-	}
-
-}
 #else
 # define _gsmReadLoop \
 #error endless loops still present into the code
-# define _gsmPrintResult(result) do { } while(0)
 #endif
 
-static int8_t _gsmReadResultTo(uint16_t to)
-{
-	char resp[8];
-	uint8_t result;
-
-	result = _gsmReadTo(resp, 8, to);
-	if (result == -1) {
-		result = 15; /* print a "?" */
-	} else {
-		result = (uint8_t)resp[0] - '0';
-		if (resp[0]=='O' && resp[1]=='K') {
-			/* Bugfix for wrong commands that return OK
-			 * instead of the numeric code '0' */
-			result = 0;
-		}
-	}
-
-	_gsmPrintResult(result);
-
-	return result;
-}
-
-static inline int8_t _gsmReadResult(void)
-{
-	// get a result with the default timeout of 3s
-	return _gsmReadResultTo(3000);
-}
-
-
-#ifdef CONFIG_GSM_AUTOBAUD
-static int8_t gsmAutobaud(void)
-{
-	char buff[16];
-	int8_t try;
-	int8_t resp;
-
-	gsmDebugLine("waiting (30s) initialization...");
-	// When DCE powers on with the autobauding enabled, it is recommended
-	// to wait 2 to 3 seconds before sending the first AT character.
-	delay(30000);
-
-	// A HEX string such as “00 49 49 49 49 FF FF FF FF” will be sent out
-	// through serial port at the baud rate of 115200 immediately after
-	// SIM900 is powered on.
-	gsmDebugLine("Flushing...");
-	gsmFlush();
-
-	// Send AT command for autobaud
-	gsmDebugLine("Autobauding...");
-	try = 3;
-	while(try--) {
-		_gsmWriteLine("AT",1000);
-		_gsmRead(buff,16);
-		resp = _gsmReadResult();
-		if (resp != OK) {
-			gsmDebugLine("Autobauding KO");
-			continue;
-		}
-		gsmDebugLine("Autobauding OK");
-		break;
-	}
-	if (try==0)
-		return ERROR;
-
-	// Load configuration
-	//gsmCmd("ATE0");
-	_gsmWriteLine("ATE0",1000);
-	_gsmRead(buff, 16);
-	resp = _gsmReadResult();
-	if (resp != OK) {
-		return resp;
-	}
-
-	// Configure TA Response Format
-	//gsmCmd("ATV0");
-	_gsmWriteLine("ATV0",1000);
-	resp = _gsmReadResult();
-	if (resp != OK) {
-		return resp;
-	}
-
-	// Test new configuration
-	//gsmCmd("AT");
-
-	gsmFlush();
-
-	return OK;
-
-}
-#else
-#define gsmAutobaud() OK
-#endif
-
-// Update the "Signal Quality Report"
-static uint8_t gsmUpdateCSQ(void)
-{
-	int8_t resp;
-	char buff[16];
-
-	_gsmWriteLine("AT+CSQ", 500);
-	_gsmRead(buff, 16);
-	resp = _gsmReadResult();
-	if (resp != OK) {
-		gsmConf.rssi = 99;
-		gsmConf.ber = 99;
-		return resp;
-	}
-
-	sscanf(buff, "+CSQ: %hhu,%hhu",
-			&gsmConf.rssi,
-			&gsmConf.ber);
-
-#ifdef CONFIG_GSM_DEBUG
-	sprintf(buff, "CSQ<=%02hhu,%02hhu", gsmConf.rssi, gsmConf.ber);
-	gsmDebugLine(buff);
-#endif
-
-	return resp;
-
-}
 
 static uint8_t gsmUpdateCREG(void)
 {
@@ -1015,44 +1051,7 @@ int8_t gsmGetNetworkParameters(void)
 	return resp;
 }
 
-void gsmUpdateConf(void)
-{
-	int8_t resp;
 
-	// Request TA Serial Number Identification(IMEI)
-	_gsmWriteLine("AT+GSN", 500);
-	_gsmRead(gsmConf.gsn, 16);
-	resp = _gsmReadResult();
-	if (resp != OK)
-		gsmConf.gsn[0] = '!';
-
-	// Request International Mobile Subscriber Identity
-	_gsmWriteLine("AT+CIMI", 500);
-	_gsmRead(gsmConf.cimi, 16);
-	resp = _gsmReadResult();
-	if (resp != OK)
-		gsmConf.cimi[0] = '!';
-
-	// Subscriber Number
-	_gsmWriteLine("AT+CCID", 500);
-	_gsmRead(gsmConf.ccid, 24);
-	resp = _gsmReadResult();
-	if (resp != OK)
-		gsmConf.ccid[0] = '!';
-
-	// Request TA Revision Identification Of Software Release
-	_gsmWriteLine("AT+GMR", 500);
-	resp = _gsmRead(gsmConf.gmr, 32);
-	if (resp<1)
-		gsmConf.gmr[0] = '!';
-
-	// Parse network parameters
-	gsmGetNetworkParameters();
-
-	// Signal Quality Report
-	gsmUpdateCSQ();
-
-}
 
 
 int8_t gsmInitNet(void)

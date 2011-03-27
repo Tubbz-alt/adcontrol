@@ -23,6 +23,7 @@ ade_WIZARD_CSRC = \
 	bertos/drv/meter_ade7753.c \
 	bertos/io/kfile.c \
 	bertos/mware/formatwr.c \
+	bertos/mware/sprintf.c \
 	bertos/drv/timer.c \
 	bertos/mware/event.c \
 	bertos/cpu/avr/drv/ser_avr.c \
