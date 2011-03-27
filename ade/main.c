@@ -2,6 +2,8 @@
 #include "console.h"
 #include "eeprom.h"
 
+#include "gsm.h"
+
 #include "hw/hw_led.h"
 
 #include <cfg/debug.h>
@@ -19,6 +21,7 @@
 #include <verstag.h>
 
 static Serial spi_port;
+static Serial gsm_port;
 static Serial dbg_port;
 
 static void init(void) {
@@ -46,12 +49,18 @@ int main(void) {
 	ser_init(&dbg_port, SER_UART0);
 	ser_setbaudrate(&dbg_port, 115200);
 
+	/* Open the GSM port */
+	ser_init(&gsm_port, SER_UART1);
+	ser_setbaudrate(&gsm_port, 115200);
+
 	/* Initialize ADE7753 SPI port and data structure */
 	spimaster_init(&spi_port, SER_SPI);
 	ser_setbaudrate(&spi_port, 500000L);
 	//meter_ade7753_init((KFile *)&spi_port);
 
 	ee_dumpConf(&dbg_port.fd);
+
+gsmPortingTest(&gsm_port);
 
 	console_init(&dbg_port.fd);
 	while(1) {

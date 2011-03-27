@@ -12,6 +12,7 @@ ade_USER_CSRC = \
 	$(ade_SRC_PATH)/command.c \
 	$(ade_SRC_PATH)/console.c \
 	$(ade_SRC_PATH)/eeprom.c \
+	$(ade_SRC_PATH)/gsm.c \
 	$(ade_SRC_PATH)/main.c \
 	#
 

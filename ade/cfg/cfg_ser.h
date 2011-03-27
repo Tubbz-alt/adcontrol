@@ -200,7 +200,7 @@
  * $WIZ$ type = "int"
  * $WIZ$ min = -1
  */
-#define CONFIG_SER_RXTIMEOUT    -1
+#define CONFIG_SER_RXTIMEOUT    3000
 
 /**
  * Use RTS/CTS handshake.
