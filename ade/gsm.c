@@ -26,9 +26,6 @@
 # define gsmDebug(STR, ...)
 #endif
 
-#define gsmFlush() ser_purge(gsm);
-
-
 /*----- GSM Locales -----*/
 
 static gsmConf_t gsmConf = {
@@ -47,22 +44,18 @@ static gsmConf_t gsmConf = {
 
 Serial *gsm;
 
-
-static int8_t _gsmWriteLine(const char *cmd, uint16_t rdelay);
-static int8_t _gsmReadTo(char *resp, uint8_t size, mtime_t to);
 static int8_t _gsmRead(char *resp, uint8_t size);
-static int8_t _gsmReadResultTo(mtime_t to);
 static int8_t _gsmReadResult(void);
-static void _gsmPrintResult(uint8_t result);
+static int8_t _gsmWrite(const char *cmd, size_t count);
+static int8_t _gsmWriteLine(const char *cmd);
+static void   _gsmPrintResult(uint8_t result);
 
 /*----- GSM Control Interface -----*/
 
 void gsmInit(Serial *port) {
-	
 	// Saving UART port device
 	ASSERT(port);
 	gsm = port;
-		
 	LOG_INFO("GSM: Init\n");
 	gsm_init();
 }
@@ -73,12 +66,10 @@ void gsmReset(void)
 	gsm_reset();
 }
 
-
-
 #ifdef CONFIG_GSM_AUTOBAUD
 static int8_t gsmAutobaud(void)
 {
-	char buff[16];
+	char buff[8];
 	int8_t try;
 	int8_t resp;
 
@@ -88,23 +79,18 @@ static int8_t gsmAutobaud(void)
 
 	// Send AT command for autobaud
 	gsmDebug("Autobauding...\n");
-	try = 3;
-	while(try--) {
-
-		_gsmWriteLine("AT", 1000);
-		_gsmRead(buff, 16);
+	for(try=3; try; try--) {
+		_gsmWriteLine("AT");
+		_gsmRead(buff, 8);
 		resp = _gsmReadResult();
-		if (resp != OK) {
-			gsmDebug("FAILED\n");
-			continue;
+		if (resp == OK) {
+			gsmDebug("DONE\n");
+			return resp;
 		}
-		gsmDebug("DONE\n");
-		break;
-	}
-	if (try==0)
-		return ERROR;
 
-	return OK;
+		gsmDebug("FAILED\n");
+	}
+	return ERROR;
 }
 #else
 #define gsmAutobaud() OK
@@ -112,25 +98,24 @@ static int8_t gsmAutobaud(void)
 
 static int8_t gsmConfigure(void)
 {
-	char buff[16];
+	char buff[8];
 	int8_t resp;
 
 	// Load configuration
-	_gsmWriteLine("ATE0", 1000);
-	_gsmRead(buff, 16);
+	_gsmWriteLine("ATE0");
+	_gsmRead(buff, 8);
 	resp = _gsmReadResult();
 	if (resp != OK) {
 		return resp;
 	}
 
 	// Configure TA Response Format
-	_gsmWriteLine("ATV0", 1000);
+	_gsmWriteLine("ATV0");
 	resp = _gsmReadResult();
 	if (resp != OK) {
 		return resp;
 	}
-	
-	gsmFlush();
+
 	return OK;
 }
 
@@ -143,15 +128,14 @@ int8_t gsmPowerOn(void)
 
 	// When DCE powers on with the autobauding enabled, it is recommended
 	// to wait 2 to 3 seconds before sending the first AT character.
-	LOG_INFO("Wait (30s) for network attachment\n");
-	timer_delay(30000);
+	LOG_INFO("Wait (15s) for network attachment\n");
+	timer_delay(15000);
 
 	result = gsmAutobaud();
 	if (result != OK)
 		return result;
 
 	result = gsmConfigure();
-
 	return result;
 }
 
@@ -170,13 +154,13 @@ int8_t gsmGetNetworkParameters(void)
 	char buff[64];
 
 	// Request TA Serial Number Identification(IMEI)
-	_gsmWriteLine("AT+CENG=1,1", 1000);
+	_gsmWriteLine("AT+CENG=1,1");
 	_gsmRead(buff, 64);
 	resp = _gsmReadResult();
 	if (resp != OK )
 		return -1;
 
-	_gsmWriteLine("AT+CENG?", 1000);
+	_gsmWriteLine("AT+CENG?");
 	// Blow-up unnedded lines
 	_gsmRead(buff, 64);
 	// Get current cell
@@ -214,7 +198,7 @@ int8_t gsmGetNetworkParameters(void)
 	// as expected at the end of the neighbors inforamtion
 	_gsmReadResult();
 
-	_gsmWriteLine("AT+CMGF=1", 500);
+	_gsmWriteLine("AT+CMGF=1");
 	_gsmReadResult();
 
 #if 0
@@ -238,7 +222,7 @@ static uint8_t gsmUpdateCSQ(void)
 	int8_t resp;
 	char buff[16];
 
-	_gsmWriteLine("AT+CSQ", 500);
+	_gsmWriteLine("AT+CSQ");
 	_gsmRead(buff, 16);
 	resp = _gsmReadResult();
 	if (resp != OK) {
@@ -268,28 +252,28 @@ void gsmUpdateConf(void)
 	int8_t resp;
 
 	// Request TA Serial Number Identification(IMEI)
-	_gsmWriteLine("AT+GSN", 500);
+	_gsmWriteLine("AT+GSN");
 	_gsmRead(gsmConf.gsn, 16);
 	resp = _gsmReadResult();
 	if (resp != OK)
 		gsmConf.gsn[0] = '!';
 
 	// Request International Mobile Subscriber Identity
-	_gsmWriteLine("AT+CIMI", 500);
+	_gsmWriteLine("AT+CIMI");
 	_gsmRead(gsmConf.cimi, 16);
 	resp = _gsmReadResult();
 	if (resp != OK)
 		gsmConf.cimi[0] = '!';
 
 	// Subscriber Number
-	_gsmWriteLine("AT+CCID", 500);
+	_gsmWriteLine("AT+CCID");
 	_gsmRead(gsmConf.ccid, 24);
 	resp = _gsmReadResult();
 	if (resp != OK)
 		gsmConf.ccid[0] = '!';
 
 	// Request TA Revision Identification Of Software Release
-	_gsmWriteLine("AT+GMR", 500);
+	_gsmWriteLine("AT+GMR");
 	resp = _gsmRead(gsmConf.gmr, 32);
 	if (resp<1)
 		gsmConf.gmr[0] = '!';
@@ -303,31 +287,47 @@ void gsmUpdateConf(void)
 }
 /*----- GSM Private methods -----*/
 
-static int8_t _gsmWriteLine(const char *cmd, uint16_t rdelay)
+static int8_t _gsmWrite(const char *cmd, size_t count)
 {
+	size_t i;
+
 	// NOTE: debugging should no be mixed to modem command and response to
 	// avoid timeing issues and discrepancy between debug and release
 	// versions
 	gsmDebug("TX [%s]\n", cmd);
 
 	// Purge any buffered data before sending a new command
-	gsmFlush();
+	ser_purge(gsm);
 
 	// Sending the AT command
-	for (size_t i=0; cmd[i]!='\0'; i++) {
+	for (i=0; cmd[i]!='\0' && count; i++, count--) {
+		kfile_putc(cmd[i], &(gsm->fd));
+	}
+	return i;
+}
+
+static int8_t _gsmWriteLine(const char *cmd)
+{
+	size_t i;
+
+	// NOTE: debugging should no be mixed to modem command and response to
+	// avoid timeing issues and discrepancy between debug and release
+	// versions
+	gsmDebug("TX [%s]\n", cmd);
+
+	// Purge any buffered data before sending a new command
+	ser_purge(gsm);
+
+	// Sending the AT command
+	for (i=0; cmd[i]!='\0'; i++) {
 		kfile_putc(cmd[i], &(gsm->fd));
 	}
 	kfile_write(&(gsm->fd), "\r\n", 2);
 
-	// Some commands could require a fixed delay to have a complete
-	// response; for example the intial autobauding command
-	if (rdelay)
-		timer_delay(rdelay);
-
-	return 0;
+	return i;
 }
 
-static int8_t _gsmReadTo(char *resp, uint8_t size, mtime_t to)
+static int8_t _gsmRead(char *resp, uint8_t size)
 {
 	int8_t len = 0;
 
@@ -336,10 +336,8 @@ static int8_t _gsmReadTo(char *resp, uint8_t size, mtime_t to)
 	// Init response vector
 	resp[0]='\0';
 
-	// Set the RX timeout
-	ser_settimeouts(gsm, to, 3000);
-
-	// Loop to get a data lines (or EOF)
+	// NOTE: kfile_gets returns also "empty" lines.
+	// Loop to get a (not null) text lines (or EOF, e.g. timeout)
 	do {
 		len = kfile_gets(&(gsm->fd), (void*)resp , size);
 		if (len==-1) {
@@ -349,43 +347,29 @@ static int8_t _gsmReadTo(char *resp, uint8_t size, mtime_t to)
 	} while (!len);
 
 	gsmDebug("RX [%s]\n", resp);
-
 	return len;
-
 }
 
-static inline int8_t _gsmRead(char *resp, uint8_t size)
-{
-	// get a response with the default timeout of 3s
-	return _gsmReadTo(resp, size, 3000);
-}
-
-static int8_t _gsmReadResultTo(mtime_t to)
+static int8_t _gsmReadResult()
 {
 	char resp[8];
 	uint8_t result;
 
-	result = _gsmReadTo(resp, 8, to);
+	result = _gsmRead(resp, 8);
 	if (result == 0) {
 		result = 15; /* print a "?" */
-	} else {
-		result = (uint8_t)resp[0] - '0';
-		if (resp[0]=='O' && resp[1]=='K') {
-			/* Bugfix for wrong commands that return OK
-			 * instead of the numeric code '0' */
-			result = 0;
-		}
+		return result;
+	}
+
+	result = (uint8_t)resp[0] - '0';
+	if (resp[0]=='O' && resp[1]=='K') {
+		/* Bugfix for wrong commands that return OK
+		 * instead of the numeric code '0' */
+		result = 0;
 	}
 
 	_gsmPrintResult(result);
-
 	return result;
-}
-
-static inline int8_t _gsmReadResult(void)
-{
-	// get a result with the default timeout of 3s
-	return _gsmReadResultTo(3000);
 }
 
 #ifdef CONFIG_GSM_DEBUG
@@ -393,37 +377,37 @@ static void _gsmPrintResult(uint8_t result)
 {
 	switch(result) {
 	case 0:
-		gsmDebug("%02d: OK\n", result);
+		gsmDebug("%d: OK\n", result);
 		break;
 	case 1:
-		gsmDebug("%02d: CONNECT\n", result);
+		gsmDebug("%d: CONNECT\n", result);
 		break;
 	case 2:
-		gsmDebug("%02d: RING\n", result);
+		gsmDebug("%d: RING\n", result);
 		break;
 	case 3:
-		gsmDebug("%02d: NO CARRIER\n", result);
+		gsmDebug("%d: NO CARRIER\n", result);
 		break;
 	case 4:
-		gsmDebug("%02d: ERROR\n", result);
+		gsmDebug("%d: ERROR\n", result);
 		break;
 	case 6:
-		gsmDebug("%02d: NO DIALTONE\n", result);
+		gsmDebug("%d: NO DIALTONE\n", result);
 		break;
 	case 7:
-		gsmDebug("%02d: BUSY\n", result);
+		gsmDebug("%d: BUSY\n", result);
 		break;
 	case 8:
-		gsmDebug("%02d: NO ANSWER\n", result);
+		gsmDebug("%d: NO ANSWER\n", result);
 		break;
 	case 9:
-		gsmDebug("%02d: PROCEEDING\n", result);
+		gsmDebug("%d: PROCEEDING\n", result);
 		break;
 	case 10:
-		gsmDebug("%02d: NO RESPONSE\n", result);
+		gsmDebug("%d: NO RESPONSE\n", result);
 		break;
 	default:
-		gsmDebug("%02d: UNDEF\n", result);
+		gsmDebug("%d: UNDEF\n", result);
 		break;
 	}
 
@@ -441,20 +425,18 @@ int8_t gsmSMSConf(uint8_t load)
 	int8_t resp;
 
 	if (load) {
-
 		// Restore SMS setting (profile 0)
-		_gsmWriteLine("AT+CRES=0", 1000);
+		_gsmWriteLine("AT+CRES=0");
 		resp = _gsmRead(buff, 16);
 		if (resp==-1) {
 			gsmDebug("Fail, loading SMS settings (profile 0)\n");
 			return ERROR;
 		}
-
 		return OK;
 	}
 
 	// Set text mode
-	_gsmWriteLine("AT+CMGF=1", 1000);
+	_gsmWriteLine("AT+CMGF=1");
 	resp = _gsmRead(buff, 16);
 	if (resp==-1) {
 		gsmDebug("Fail, set Text Mode\n");
@@ -462,7 +444,7 @@ int8_t gsmSMSConf(uint8_t load)
 	}
 
 	// Select TE (GMS) Character Set
-	_gsmWriteLine("AT+CSCS=\"GSM\"", 1000);
+	_gsmWriteLine("AT+CSCS=\"GSM\"");
 	resp = _gsmRead(buff, 16);
 	if (resp==-1) {
 		gsmDebug("Fail, set char set\n");
@@ -475,7 +457,7 @@ int8_t gsmSMSConf(uint8_t load)
 	// - No CBM indications are routed to the TE
 	// - No SMS-STATUS-REPORTs are routed to the TE
 	// - Celar TA buffer of unsolicited result codes
-	_gsmWriteLine("AT+CNMI=3,0,0,0,1", 1000);
+	_gsmWriteLine("AT+CNMI=3,0,0,0,1");
 	resp = _gsmRead(buff, 16);
 	if (resp==-1) {
 		gsmDebug("Fail, set Indications\n");
@@ -495,7 +477,7 @@ int8_t gsmSMSConf(uint8_t load)
 	// Set +CSCB
 
 	// Save SMS Settings (profile "0")
-	_gsmWriteLine("AT+CSAS=0", 1000);
+	_gsmWriteLine("AT+CSAS=0");
 	resp = _gsmRead(buff, 16);
 	if (resp==-1) {
 		gsmDebug("Fail, save settings\n");
@@ -517,21 +499,23 @@ int8_t gsmSMSSend(const char *number, const char *message)
 #warning CHECK for message max length!!!
 #endif
 	// Sending destination number
-	sprintf(buff, "AT+CMGS=\"%s\", 145", number);
-	_gsmWriteLine(buff, 1000);
-	//_gsmWriteLine("AT+CMGS=\"", 0);
-	//_gsmWriteLine(number, 0);
-	//_gsmWriteLine("\", 145", 1000);
+	//sprintf(buff, "AT+CMGS=\"%s\", 145", number);
+	//_gsmWriteLine(buff, 1000);
+	_gsmWrite("AT+CMGS=\"", 9);
+	_gsmWrite(number, strlen(number));
+	_gsmWriteLine("\", 145");
+
+	// Wait for modem message prompt
 	_gsmRead(buff, 32);
 
 	// Sending message
-	_gsmWriteLine(message, 1000);
+	_gsmWriteLine(message);
 
 	// Sending terminator
-	_gsmWriteLine("\x1a", 1000);
+	_gsmWriteLine("\x1a");
 
 	// Waiting send confirmation
-	_gsmReadTo(buff, 32, 15000);
+	_gsmRead(buff, 32);
 	resp = _gsmReadResult();
 
 	return resp;
@@ -573,7 +557,7 @@ int8_t gsmSMSLast(gsmSMSMessage_t * msg) {
 	uint8_t len = 0;
 
 	// Get message list
-	_gsmWriteLine("AT+CMGR=1", 1000);
+	_gsmWriteLine("AT+CMGR=1");
 	// Example responce:
 	// +CMGR: "REC READ","+393357963938","","10/12/14,22:59:15+04"<0D><0A>
 	// $NUM+393473153808$NUM+3355763944$RES$MSG:PiazzaleLargo e Lungo, Milano, Italy$12345<0D>
@@ -584,14 +568,14 @@ int8_t gsmSMSLast(gsmSMSMessage_t * msg) {
 	// Getting SMS sender and timestamp
 	do {
 		len += resp;
-		resp = _gsmReadTo(buff+len, 255-len, 15000);
+		resp = _gsmRead(buff+len, 255-len);
 		if (resp==-1) {
 			gsmDebug("Fail, get last SMS\n");
 			return ERROR;
 		}
 	} while (buff[len]!='0');
 
-	gsmDebug("SMS: [%s]\n", buff);
+	LOG_INFO("SMS: [%s]\n", buff);
 
 	gsmSMSParse(buff, msg);
 
@@ -600,26 +584,20 @@ int8_t gsmSMSLast(gsmSMSMessage_t * msg) {
 
 int8_t gsmSMSList(void)
 {
-    int8_t resp;
+	int8_t resp;
 
-    // Get message list
-    //_gsmWriteLine("AT+CMGL=\"ALL\",1", 1000);
-    _gsmWriteLine("AT+CMGL=\"ALL\"", 3000);
-    do {
-		do {
-	        resp = _gsmReadTo(buff, 255, 5000);
-			if (resp==-1) break;
-		} while (!resp);
-        if (resp<0)
-            break;
-    } while (strcmp(buff,"OK") &&
-            strcmp(buff,"+CMS"));
-    if (resp==-1) {
-        gsmDebug("Fail, get SMS list\n");
-        return ERROR;
-    }
+	// Get message list
+	_gsmWriteLine("AT+CMGL=\"ALL\"");
+	do {
+		resp = _gsmRead(buff, 255);
+		if (resp==-1) {
+			gsmDebug("Fail, get SMS list\n");
+			return ERROR;
+		}
+	} while (strcmp(buff,"OK") &&
+			strcmp(buff,"+CMS"));
 
-    return OK;
+	return OK;
 }
 
 void gsmSMSListTesting(void) {
@@ -628,19 +606,13 @@ void gsmSMSListTesting(void) {
 	// Read SMS Message Storage
 	// => +CPMS: "SM",2,3
 	// ==> <mem1>,<used1>,<total1>
-	_gsmWriteLine("AT+CPMS?", 5000);
-	do {
-		resp = _gsmRead(buff, 255);
-		if (resp==-1) break;
-	} while(!resp);
+	_gsmWriteLine("AT+CPMS?");
+	resp = _gsmRead(buff, 255);
 	if (resp==-1)
 		return;
 
-	_gsmWriteLine("AT+CNMI?", 5000);
-	do {
-		resp = _gsmRead(buff, 255);
-		if (resp==-1) break;
-	} while(!resp);
+	_gsmWriteLine("AT+CNMI?");
+	resp = _gsmRead(buff, 255);
 	if (resp==-1)
 		return;
 }
