@@ -10,9 +10,8 @@
 
 #include <cfg/compiler.h>
 
-#include <mware/sprintf.h>
-
-//#include <string.h>
+#include <stdio.h> 			// sprintf
+#include <string.h> 		// strstr
 #include <avr/pgmspace.h>
 
 /* Define logging settings (for cfg/log.h module). */
@@ -141,7 +140,6 @@ int8_t gsmPowerOn(void)
 
 	LOG_INFO("GSM: Powering-on...\n");
 	gsm_powerOn();
-	gsmDebug("DONE\n");
 
 	// When DCE powers on with the autobauding enabled, it is recommended
 	// to wait 2 to 3 seconds before sending the first AT character.
@@ -161,7 +159,6 @@ void gsmPowerOff(void)
 {
 	LOG_INFO("GSM: Powering-off...\n");
 	gsm_powerOff();
-	gsmDebug("DONE\n");
 }
 
 
@@ -340,16 +337,16 @@ static int8_t _gsmReadTo(char *resp, uint8_t size, mtime_t to)
 	resp[0]='\0';
 
 	// Set the RX timeout
-	ser_settimeouts(gsm, to, 0);
+	ser_settimeouts(gsm, to, 3000);
 
 	// Loop to get a data lines (or EOF)
 	do {
 		len = kfile_gets(&(gsm->fd), (void*)resp , size);
 		if (len==-1) {
-			break;
+			gsmDebug("RX FAILED\n", resp);
+			return len;
 		}
 	} while (!len);
-	//len = gsmReadLine(resp, size);
 
 	gsmDebug("RX [%s]\n", resp);
 
@@ -540,14 +537,117 @@ int8_t gsmSMSSend(const char *number, const char *message)
 	return resp;
 }
 
+int8_t gsmSMSParse(char *buff, gsmSMSMessage_t * msg) {
+	char * p1;
+	char * p2;
+	int8_t i;
 
+	// Example message buffer:
+	// +CMGR: "REC READ","+393357963938","","10/12/14,22:59:15+04"
+	// NUM+<from>NUM+<to>RESMSG:<text>
 
+	// parsing TIME
+	p1 = strstr(buff, "/");
+	strncpy(msg->time, p1-2, 20);
 
+	// parsing FROM number
+	p1 = strstr(buff, "NUM+");
+	p1 += 3;
+	p2 = strstr(p1, "NUM+");
+	i = (p2-p1 > 15) ? 15 : p2-p1;
+	strncpy(msg->from, p1, i);
 
+	// parsing TEXT message
+	p1 = strstr(p1+26, "MSG:");
+	strncpy(msg->text, p1+4, 160);
 
+	return 0;
+
+}
+
+gsmSMSMessage_t msg;
+char buff[256];
+
+int8_t gsmSMSLast(gsmSMSMessage_t * msg) {
+	int8_t resp = 0;
+	uint8_t len = 0;
+
+	// Get message list
+	_gsmWriteLine("AT+CMGR=1", 1000);
+	// Example responce:
+	// +CMGR: "REC READ","+393357963938","","10/12/14,22:59:15+04"<0D><0A>
+	// $NUM+393473153808$NUM+3355763944$RES$MSG:PiazzaleLargo e Lungo, Milano, Italy$12345<0D>
+	// <0D><0A>
+	// <0D><0A>
+	// 0<0D>
+
+	// Getting SMS sender and timestamp
+	do {
+		len += resp;
+		resp = _gsmReadTo(buff+len, 255-len, 15000);
+		if (resp==-1) {
+			gsmDebug("Fail, get last SMS\n");
+			return ERROR;
+		}
+	} while (buff[len]!='0');
+
+	gsmDebug("SMS: [%s]\n", buff);
+
+	gsmSMSParse(buff, msg);
+
+	return OK;
+}
+
+int8_t gsmSMSList(void)
+{
+    int8_t resp;
+
+    // Get message list
+    //_gsmWriteLine("AT+CMGL=\"ALL\",1", 1000);
+    _gsmWriteLine("AT+CMGL=\"ALL\"", 3000);
+    do {
+		do {
+	        resp = _gsmReadTo(buff, 255, 5000);
+			if (resp==-1) break;
+		} while (!resp);
+        if (resp<0)
+            break;
+    } while (strcmp(buff,"OK") &&
+            strcmp(buff,"+CMS"));
+    if (resp==-1) {
+        gsmDebug("Fail, get SMS list\n");
+        return ERROR;
+    }
+
+    return OK;
+}
+
+void gsmSMSListTesting(void) {
+	int8_t resp;
+
+	// Read SMS Message Storage
+	// => +CPMS: "SM",2,3
+	// ==> <mem1>,<used1>,<total1>
+	_gsmWriteLine("AT+CPMS?", 5000);
+	do {
+		resp = _gsmRead(buff, 255);
+		if (resp==-1) break;
+	} while(!resp);
+	if (resp==-1)
+		return;
+
+	_gsmWriteLine("AT+CNMI?", 5000);
+	do {
+		resp = _gsmRead(buff, 255);
+		if (resp==-1) break;
+	} while(!resp);
+	if (resp==-1)
+		return;
+}
 
 
 void gsmPortingTest(Serial *port) {
+
 	gsmInit(port);
 	gsmPowerOn();
 
@@ -555,8 +655,19 @@ void gsmPortingTest(Serial *port) {
 	//timer_delay(1000);
 
 	gsmSMSConf(0);
-	timer_delay(5000);
-	gsmSMSSend("+393473153808", "Test message from RFN");
+	//timer_delay(5000);
+	//gsmSMSSend("+393473153808", "Test message from RFN");
+	//gsmSMSSend("+393357963938", "Test message from RFN");
+
+	for(uint8_t i=0; i<100; i++) {
+
+		//gsmSMSList();
+		gsmSMSLast(&msg);
+
+		//gsmSMSListTesting();
+
+		timer_delay(10000);
+	}
 
 	timer_delay(15000);
 	gsmPowerOff();

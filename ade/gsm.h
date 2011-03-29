@@ -148,7 +148,8 @@ int8_t gsmGetNetworkParameters(void);
 /*----- GSM SMS Interface -----*/
 int8_t gsmSMSConf(uint8_t load);
 int8_t gsmSMSSend(const char *number, const char *message);
-
+int8_t gsmSMSParse(char *buff, gsmSMSMessage_t * msg);
+int8_t gsmSMSLast(gsmSMSMessage_t * msg);
 
 #if 0
 /* GSM Configuration Interface */

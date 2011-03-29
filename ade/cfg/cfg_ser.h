@@ -72,7 +72,7 @@
  * $WIZ$ min = 2
  * $WIZ$ supports = "lm3s or lpc2 or (at91 and not atmega8 and not atmega168 and not atmega32)"
  */
-#define CONFIG_UART1_RXBUFSIZE  32
+#define CONFIG_UART1_RXBUFSIZE  256
 
 /**
  * Size of the outbound FIFO buffer for port 2 [bytes].
@@ -193,7 +193,7 @@
  * $WIZ$ type = "int"
  * $WIZ$ min = -1
  */
-#define CONFIG_SER_TXTIMEOUT    -1
+#define CONFIG_SER_TXTIMEOUT    3000
 
 /**
  * Default receive timeout (ms). Set to -1 to disable timeout support.
