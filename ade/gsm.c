@@ -341,7 +341,7 @@ static int8_t _gsmRead(char *resp, uint8_t size)
 	do {
 		len = kfile_gets(&(gsm->fd), (void*)resp , size);
 		if (len==-1) {
-			gsmDebug("RX FAILED\n", resp);
+			gsmDebug("RX FAILED\n");
 			return len;
 		}
 	} while (!len);
@@ -521,43 +521,20 @@ int8_t gsmSMSSend(const char *number, const char *message)
 	return resp;
 }
 
-int8_t gsmSMSParse(char *buff, gsmSMSMessage_t * msg) {
-	char * p1;
-	char * p2;
-	int8_t i;
-
-	// Example message buffer:
-	// +CMGR: "REC READ","+393357963938","","10/12/14,22:59:15+04"
-	// NUM+<from>NUM+<to>RESMSG:<text>
-
-	// parsing TIME
-	p1 = strstr(buff, "/");
-	strncpy(msg->time, p1-2, 20);
-
-	// parsing FROM number
-	p1 = strstr(buff, "NUM+");
-	p1 += 3;
-	p2 = strstr(p1, "NUM+");
-	i = (p2-p1 > 15) ? 15 : p2-p1;
-	strncpy(msg->from, p1, i);
-
-	// parsing TEXT message
-	p1 = strstr(p1+26, "MSG:");
-	strncpy(msg->text, p1+4, 160);
-
-	return 0;
-
-}
-
 gsmSMSMessage_t msg;
 char buff[256];
 
-int8_t gsmSMSLast(gsmSMSMessage_t * msg) {
-	int8_t resp = 0;
-	uint8_t len = 0;
+
+int8_t gsmSMSByIndex(gsmSMSMessage_t * msg, uint8_t index) {
+	char c;
+	uint8_t i;
+	char buff[13];
+	char *text;
 
 	// Get message list
-	_gsmWriteLine("AT+CMGR=1");
+	if (index>10) index = 10;
+	sprintf(buff, "AT+CMGR=%d", index);
+	_gsmWriteLine(buff);
 	// Example responce:
 	// +CMGR: "REC READ","+393357963938","","10/12/14,22:59:15+04"<0D><0A>
 	// $NUM+393473153808$NUM+3355763944$RES$MSG:PiazzaleLargo e Lungo, Milano, Italy$12345<0D>
@@ -565,29 +542,106 @@ int8_t gsmSMSLast(gsmSMSMessage_t * msg) {
 	// <0D><0A>
 	// 0<0D>
 
-	// Getting SMS sender and timestamp
-	do {
-		len += resp;
-		resp = _gsmRead(buff+len, 255-len);
-		if (resp==-1) {
-			gsmDebug("Fail, get last SMS\n");
-			return ERROR;
+	//***** Reading message Type, record format:
+	// +CMGR: <TYPE>
+	// wherem TYPE is:
+	// Type          Bytes  Description
+	// "REC UNREAD"     12  Received unread messages
+	// "REC READ"       10  Received read messages
+	// "STO UNSENT"     12  Stored unsent messages
+	// "STO SENT"       10  Stored sent messages
+	// Minimum unique substring: 6 Bytes
+	// Thus, to parse the actual type, we read:
+	//     "+CMGR: " + 6Bytes = 13Bytes
+	if (!kfile_read(&(gsm->fd), buff, 13))
+		goto parse_error;
+
+	// TODO: Parse message type
+	//
+
+	//***** Sender number
+	// Scanning for second '"', than parse the sender number
+	for (i=2; i; ) {
+		c = kfile_getc(&(gsm->fd));
+		if (c == EOF)
+			goto parse_error;
+		if (c=='"')
+			i--;
+	}
+	// Save the sender number, till next '"'
+	for (i=0; i<15; i++) {
+		c = kfile_getc(&(gsm->fd));
+		if (c == EOF)
+			goto parse_error;
+		if (c=='"')
+			break;
+		msg->from[i] = c;
+	}
+	msg->from[i] = '\0';
+
+	//***** Timestamp parsing
+	// Scanning for three '"', than parse the timestamp
+	for (i=3; i; ) {
+		c = kfile_getc(&(gsm->fd));
+		if (c == EOF)
+			goto parse_error;
+		if (c=='"')
+			i--;
+	}
+	// Save the timestamp (20 Bytes + terminator)
+	if (!kfile_read(&(gsm->fd), msg->time, 20))
+		goto parse_error;
+	msg->time[20] = '\0';
+	// Discard remaining chars till line termination ["<0D><0A>]
+	if (!kfile_read(&(gsm->fd), buff, 3))
+		goto parse_error;
+
+	//***** Message parsing
+	text = msg->text;
+	(*text) = kfile_getc(&(gsm->fd));
+	if ((*text) == EOF)
+		goto parse_error;
+
+	if ((*text) == '$') {
+		// Scanning for first ':', than parse the message
+		for (i=0; i<64; i++) {
+			c = kfile_getc(&(gsm->fd));
+			if (c == EOF)
+				goto parse_error;
+			if (c==':')
+				break;
 		}
-	} while (buff[len]!='0');
+		// Save the message
+		if (_gsmRead(text, 160) == -1)
+			goto parse_error;
+	} else {
+		// We are already at the beginning of the message,
+		// save the remainder of the text
+		if (_gsmRead(text+1, 159) == -1)
+			goto parse_error;
+	}
 
-	LOG_INFO("SMS: [%s]\n", buff);
-
-	gsmSMSParse(buff, msg);
+	LOG_INFO("SMS, P: %d, T: %s, N: %s, M: %s\n",
+			index, msg->time, msg->from, msg->text);
 
 	return OK;
+
+parse_error:
+	gsmDebug("Parse FAILED\n");
+	return -1;
 }
 
-int8_t gsmSMSList(void)
+inline int8_t gsmSMSLast(gsmSMSMessage_t * msg) {
+	return gsmSMSByIndex(msg, 1);
+}
+
+
+int8_t gsmSMSDeleteReaded(void)
 {
 	int8_t resp;
 
 	// Get message list
-	_gsmWriteLine("AT+CMGL=\"ALL\"");
+	_gsmWriteLine("AT+CMGD=1,");
 	do {
 		resp = _gsmRead(buff, 255);
 		if (resp==-1) {
@@ -596,6 +650,25 @@ int8_t gsmSMSList(void)
 		}
 	} while (strcmp(buff,"OK") &&
 			strcmp(buff,"+CMS"));
+
+	return OK;
+}
+
+
+
+int8_t gsmSMSList(void)
+{
+	int8_t resp;
+
+	// Get message list
+	_gsmWriteLine("AT+CMGL=\"ALL\",1");
+	do {
+		resp = _gsmRead(buff, 255);
+		if (resp==-1) {
+			gsmDebug("Fail, get SMS list\n");
+			return ERROR;
+		}
+	} while (buff[0]!='0');
 
 	return OK;
 }
@@ -632,11 +705,14 @@ void gsmPortingTest(Serial *port) {
 	//gsmSMSSend("+393357963938", "Test message from RFN");
 
 	for(uint8_t i=0; i<100; i++) {
+		gsmSMSList();
+		timer_delay(1000);
 
-		//gsmSMSList();
-		gsmSMSLast(&msg);
-
-		//gsmSMSListTesting();
+		//gsmSMSLast(&msg);
+		for (uint8_t j=1; j<10; j++) {
+			gsmSMSByIndex(&msg,j);
+			timer_delay(1000);
+		}
 
 		timer_delay(10000);
 	}
