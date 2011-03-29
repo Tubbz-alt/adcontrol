@@ -499,17 +499,26 @@ int8_t gsmSMSSend(const char *number, const char *message)
 #warning CHECK for message max length!!!
 #endif
 	// Sending destination number
-	//sprintf(buff, "AT+CMGS=\"%s\", 145", number);
-	//_gsmWriteLine(buff, 1000);
-	_gsmWrite("AT+CMGS=\"", 9);
-	_gsmWrite(number, strlen(number));
-	_gsmWriteLine("\", 145");
+	sprintf(buff, "AT+CMGS=\"%s\", 145", number);
+	_gsmWriteLine(buff);
+	timer_delay(1000);
+	//_gsmWrite("AT+CMGS=\"", 9);
+	//_gsmWrite(number, strlen(number));
+	//_gsmWriteLine("\", 145");
 
 	// Wait for modem message prompt
-	_gsmRead(buff, 32);
+	//_gsmRead(buff, 32);
+	for (uint8_t i=0; i<15; i++) {
+		(*buff) = kfile_getc(&(gsm->fd));
+		if ((*buff) == EOF)
+			return -1;
+		if ((*buff) == '>')
+			break;
+	}
 
 	// Sending message
 	_gsmWriteLine(message);
+	timer_delay(1000);
 
 	// Sending terminator
 	_gsmWriteLine("\x1a");
@@ -553,7 +562,23 @@ int8_t gsmSMSByIndex(gsmSMSMessage_t * msg, uint8_t index) {
 	// Minimum unique substring: 6 Bytes
 	// Thus, to parse the actual type, we read:
 	//     "+CMGR: " + 6Bytes = 13Bytes
-	if (!kfile_read(&(gsm->fd), buff, 13))
+
+
+	// Check if this message index is empty
+	// In this case it is returned just "0<0D>"
+	c = kfile_getc(&(gsm->fd));
+	if (c == EOF)
+		goto parse_error;
+	if (c == '0') {
+		msg->from[0] = 0;
+		msg->time[0] = 0;
+		msg->text[0] = 0;
+		LOG_INFO("SMS, P: %d, EMPTY\n", index);
+		return OK;
+	}
+
+	// Read the rest of the initial record identifier
+	if (!kfile_read(&(gsm->fd), buff, 12))
 		goto parse_error;
 
 	// TODO: Parse message type
@@ -636,20 +661,16 @@ inline int8_t gsmSMSLast(gsmSMSMessage_t * msg) {
 }
 
 
-int8_t gsmSMSDeleteReaded(void)
+int8_t gsmSMSDelRead(void)
 {
-	int8_t resp;
+	char buff[16];
 
 	// Get message list
-	_gsmWriteLine("AT+CMGD=1,");
-	do {
-		resp = _gsmRead(buff, 255);
-		if (resp==-1) {
-			gsmDebug("Fail, get SMS list\n");
-			return ERROR;
-		}
-	} while (strcmp(buff,"OK") &&
-			strcmp(buff,"+CMS"));
+	_gsmWriteLine("AT+CMGD=1,3");
+	if (_gsmRead(buff, 16) == -1) {
+		gsmDebug("Fail, get SMS list\n");
+		return ERROR;
+	}
 
 	return OK;
 }
@@ -663,8 +684,7 @@ int8_t gsmSMSList(void)
 	// Get message list
 	_gsmWriteLine("AT+CMGL=\"ALL\",1");
 	do {
-		resp = _gsmRead(buff, 255);
-		if (resp==-1) {
+		if (_gsmRead(buff, 255) == -1) {
 			gsmDebug("Fail, get SMS list\n");
 			return ERROR;
 		}
