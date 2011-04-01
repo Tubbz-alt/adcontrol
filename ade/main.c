@@ -1,6 +1,7 @@
 
 #include "console.h"
 #include "eeprom.h"
+#include "control.h"
 
 #include "gsm.h"
 
@@ -22,7 +23,7 @@
 
 static Serial spi_port;
 static Serial gsm_port;
-static Serial dbg_port;
+Serial dbg_port;
 
 static void init(void) {
 
@@ -43,7 +44,7 @@ int main(void) {
 	init();
 	LED_ON();
 
-	kprintf("ACSense\nBuildNr %d\n", vers_build_nr);
+	kprintf("RFN (c) 2011 RCT\r\nBuildNr %d\r\n", vers_build_nr);
 
 	/* Open the Console port */
 	ser_init(&dbg_port, SER_UART0);
@@ -56,16 +57,24 @@ int main(void) {
 	/* Initialize ADE7753 SPI port and data structure */
 	spimaster_init(&spi_port, SER_SPI);
 	ser_setbaudrate(&spi_port, 500000L);
-	//meter_ade7753_init((KFile *)&spi_port);
+	meter_ade7753_init((KFile *)&spi_port);
 
+	/* Entering the main control loop */
+	controlSetup();
+	while(1) {
+		controlLoop();
+	}
+
+#if 0
 	ee_dumpConf(&dbg_port.fd);
 
-gsmPortingTest(&gsm_port);
+	gsmPortingTest(&gsm_port);
 
 	console_init(&dbg_port.fd);
 	while(1) {
 		console_run(&dbg_port.fd);
 	}
+#endif
 
 	return 0;
 }
