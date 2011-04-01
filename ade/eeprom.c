@@ -6,6 +6,11 @@
 
 #include <drv/timer.h>
 
+/* Define logging settings (for cfg/log.h module). */
+#define LOG_LEVEL   LOG_LVL_INFO
+#define LOG_FORMAT  LOG_FMT_TERSE
+#include <cfg/log.h>
+
 
 eeprom_conf_t EEMEM eeconf = {
 	.sms_dest = {
@@ -18,6 +23,24 @@ eeprom_conf_t EEMEM eeconf = {
 			"EEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBE\0",
 
 };
+
+static int8_t ee_setBytes(uint8_t *eep, const char *buf, uint8_t size) {
+	uint8_t i;
+	for (i=0; i<size; i++) {
+		eeprom_update_byte(eep, (uint8_t)(*buf));
+		buf++; eep++;
+	}
+	return i;
+}
+
+static int8_t ee_getBytes(const uint8_t *eep, char *buf, uint8_t size) {
+	uint8_t i;
+	for (i=0; i<size; i++) {
+		(*buf) = eeprom_read_byte(eep);
+		buf++; eep++;
+	}
+	return i;
+}
 
 static int8_t ee_setString(uint8_t *eep, const char *str, uint8_t size) {
 	uint8_t i;
@@ -83,25 +106,46 @@ int8_t ee_setSmsText(const char *buf) {
 
 }
 
-void ee_dumpConf(KFile *fd) {
+int8_t ee_setChMask(uint16_t chMask) {
+	return ee_setBytes(
+			(uint8_t*)eeconf.enabledChannelsMask,
+			(const char*)&chMask, 2);
+}
+
+int16_t ee_getChMask(void) {
+	uint16_t chMask;
+	ee_getBytes(
+			(uint8_t*)eeconf.enabledChannelsMask,
+			(char*)&chMask, 2);
+	return chMask;
+}
+
+
+
+void ee_dumpConf(void) {
 	uint8_t i;
 	char buff[MAX_MSG_TEXT];
+	uint16_t chMask;
 
-	kfile_print(fd, ".:: EEPROM Conf\n");
+	LOG_INFO(".:: EEPROM Conf\r\n");
 	timer_delay(5);
 
 	// Dump SMS destinations
 	for (i=0; i<MAX_SMS_DEST; i++) {
 		ee_getSmsDest(i, buff, MAX_SMS_NUM);
-		kfile_printf(fd, "SMS[%d]: %s\r\n", i, buff);
+		LOG_INFO(" SMS[%d]: %s\r\n", i, buff);
 		timer_delay(5);
 	}
+
 	// Dump SMS message
 	ee_getSmsText(buff, MAX_MSG_TEXT);
-	kfile_print(fd, "SMS Text: ");
-	kfile_print(fd, buff);
-	kfile_print(fd, "\r\n");
+	LOG_INFO(" SMS Text: %s\r\n", buff);
 	timer_delay(5);
+
+	chMask = ee_getChMask();
+	LOG_INFO(" Enabled CHs: 0x%X\r\n", chMask);
+	timer_delay(5);
+
 }
 
 
