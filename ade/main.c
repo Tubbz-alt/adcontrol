@@ -59,6 +59,12 @@ int main(void) {
 	ser_setbaudrate(&spi_port, 500000L);
 	meter_ade7753_init((KFile *)&spi_port);
 
+	/* Power-on Modem */
+	gsmInit(&gsm_port);
+	gsmPowerOn();
+	gsmSMSConf(0);
+	timer_delay(15000);
+
 	/* Entering the main control loop */
 	controlSetup();
 	while(1) {

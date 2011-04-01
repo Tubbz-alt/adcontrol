@@ -41,6 +41,11 @@
 #define LOG_FORMAT  LOG_FMT_TERSE
 #include <cfg/log.h>
 
+//#define DB(x) x
+#define DB(x)
+#define SMS_(x) x
+//#define SMS_(x)
+
 // The time interval [s] for received SMS handling
 #define SMS_CHECK_SEC	30
 
@@ -98,7 +103,7 @@ static void cmd_task(iptr_t timer) {
 
 //=====[ Channels Data ]========================================================
 
-#define CALIBRATION_SAMPLES 30
+#define CALIBRATION_SAMPLES 64
 
 #define chEnabled(CH) (chMask & BV16(CH))
 #define chUncalibrated(CH) (chCalib & BV16(CH))
@@ -175,7 +180,7 @@ static inline void readMeter(uint8_t ch) {
 	pwr = meter_ade7753_Irms();
 	chSetSample(ch, pwr);
 
-	kprintf("CH[%hd]: %08ld\r\n", ch, chData[ch].Icur);
+	DB(kprintf("CH[%hd]: %08ld\r\n", ch, chData[ch].Icur));
 
 }
 
@@ -320,7 +325,7 @@ static void notifyLoss(uint8_t ch) {
 			continue;
 
 		LOG_INFO("Notifing [%s]...\r\n", dst);
-		//gsmSMSSend(dst, msg);
+		SMS_(gsmSMSSend(dst, msg));
 	}
 
 }
@@ -378,7 +383,7 @@ void controlSetup(void) {
 void controlLoop(void) {
 	uint8_t ch; // The currently selected channel
 
-	timer_delay(100);
+	DB(timer_delay(100));
 
 	// Select Channel to sample and get P measure
 	ch = sampleChannel();
