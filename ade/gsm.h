@@ -151,6 +151,12 @@ int8_t gsmSMSSend(const char *number, const char *message);
 int8_t gsmSMSParse(char *buff, gsmSMSMessage_t * msg);
 int8_t gsmSMSLast(gsmSMSMessage_t * msg);
 
+int8_t gsmSMSByIndex(gsmSMSMessage_t * msg, uint8_t index);
+int8_t gsmSMSDel(uint8_t index);
+int8_t gsmSMSDelRead(void);
+int8_t gsmSMSList(void);
+int8_t gsmGetNewMessage(gsmSMSMessage_t * msg);
+
 #if 0
 /* GSM Configuration Interface */
 void gsmUpdateConf(void);

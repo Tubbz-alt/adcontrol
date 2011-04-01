@@ -534,14 +534,21 @@ gsmSMSMessage_t msg;
 char buff[256];
 
 
+/**
+ * @return 1 if a valid message has been retrived, 0 on no valid message, -1
+ * on parsing error.
+ */
 int8_t gsmSMSByIndex(gsmSMSMessage_t * msg, uint8_t index) {
 	char c;
 	uint8_t i;
 	char buff[13];
 	char *text;
 
-	// Get message list
-	if (index>10) index = 10;
+	// SMS indexes are 1..10
+	if (!index || index>10)
+		return 0;
+
+	// Get the SMS message by the specified index
 	sprintf(buff, "AT+CMGR=%d", index);
 	_gsmWriteLine(buff);
 	// Example responce:
@@ -574,7 +581,7 @@ int8_t gsmSMSByIndex(gsmSMSMessage_t * msg, uint8_t index) {
 		msg->time[0] = 0;
 		msg->text[0] = 0;
 		LOG_INFO("SMS, P: %d, EMPTY\n", index);
-		return OK;
+		return 0;
 	}
 
 	// Read the rest of the initial record identifier
@@ -649,7 +656,7 @@ int8_t gsmSMSByIndex(gsmSMSMessage_t * msg, uint8_t index) {
 	LOG_INFO("SMS, P: %d, T: %s, N: %s, M: %s\n",
 			index, msg->time, msg->from, msg->text);
 
-	return OK;
+	return 1;
 
 parse_error:
 	gsmDebug("Parse FAILED\n");
@@ -660,15 +667,32 @@ inline int8_t gsmSMSLast(gsmSMSMessage_t * msg) {
 	return gsmSMSByIndex(msg, 1);
 }
 
+int8_t gsmSMSDel(uint8_t index)
+{
+	char buff[16];
+
+	// Delete selected message
+	if (!index || index>10)
+		return OK;
+
+	sprintf(buff, "AT+CMGD=%d,0", index);
+	_gsmWriteLine(buff);
+	if (_gsmRead(buff, 16) == -1) {
+		LOG_ERR("Fails, delete SMS %d\n", index);
+		return ERROR;
+	}
+
+	return OK;
+}
+
 
 int8_t gsmSMSDelRead(void)
 {
 	char buff[16];
 
-	// Get message list
 	_gsmWriteLine("AT+CMGD=1,3");
 	if (_gsmRead(buff, 16) == -1) {
-		gsmDebug("Fail, get SMS list\n");
+		LOG_ERR("Fails, delete readed SMS\n");
 		return ERROR;
 	}
 
@@ -679,9 +703,6 @@ int8_t gsmSMSDelRead(void)
 
 int8_t gsmSMSList(void)
 {
-	int8_t resp;
-
-	// Get message list
 	_gsmWriteLine("AT+CMGL=\"ALL\",1");
 	do {
 		if (_gsmRead(buff, 255) == -1) {
@@ -693,7 +714,7 @@ int8_t gsmSMSList(void)
 	return OK;
 }
 
-void gsmSMSListTesting(void) {
+static void gsmSMSListTesting(void) {
 	int8_t resp;
 
 	// Read SMS Message Storage
@@ -711,6 +732,27 @@ void gsmSMSListTesting(void) {
 }
 
 
+/**
+ * @return the SMS index if found, 0 otherwise.
+ */
+int8_t gsmGetNewMessage(gsmSMSMessage_t * msg) {
+	uint8_t idx;
+
+	LOG_INFO("Scanning for new SMS...\n");
+	for (idx=1; idx<10; idx++) {
+		if ( gsmSMSByIndex(msg, idx)>0 )
+			break;
+	}
+
+	// Return the message index if we found a valid SMS
+	if (idx<10)
+		return idx;
+
+	// No new SMS messages available.
+	return 0;
+}
+
+
 void gsmPortingTest(Serial *port) {
 
 	gsmInit(port);
@@ -722,17 +764,34 @@ void gsmPortingTest(Serial *port) {
 	gsmSMSConf(0);
 	//timer_delay(5000);
 	//gsmSMSSend("+393473153808", "Test message from RFN");
-	//gsmSMSSend("+393357963938", "Test message from RFN");
+	while (1) {
+		gsmSMSSend("+393473153808", "Test message from RFN");
+		//gsmSMSSend("+393357963938", "Test message from RFN");
+		timer_delay(10000);
+	}
 
-	for(uint8_t i=0; i<100; i++) {
+//  Prova invio messaggio molto lungo, che impiega tutti i 160 caratteri a
+//	disposizione per un singolo SMS. Vediamo se i buffer disponibili sono
+//	sufficienti.  Ciao
+
+
+	for(uint8_t i=1; i<100; i++) {
+
+		LOG_INFO("Iteration %d/100\n", i);
+
 		gsmSMSList();
 		timer_delay(1000);
 
 		//gsmSMSLast(&msg);
 		for (uint8_t j=1; j<10; j++) {
 			gsmSMSByIndex(&msg,j);
-			timer_delay(1000);
+			timer_delay(500);
 		}
+
+		gsmSMSDelRead();
+
+		if (!(i%3))
+			gsmSMSSend("+393357963938", "Test message from RFN");
 
 		timer_delay(10000);
 	}
