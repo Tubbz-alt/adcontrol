@@ -12,7 +12,7 @@ read resp
 
 [ "x"$resp != "xy" ] && exit 0
 
-CMD="-e -U flash:w:$1:i"
+CMD="-U flash:w:$1:i"
 echo "Flashing device ($CMD)..."
 
 sudo /usr/bin/avrdude -C /etc/avrdude.conf -c avrispmkII -p atmega644p -P usb -b 115200 $CMD
