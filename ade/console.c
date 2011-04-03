@@ -23,8 +23,6 @@ void console_run(KFile *fd) {
 
 	if (linebuf[0]!='\0' && linebuf[0]!='#')
 		command_parse(fd, linebuf);
-
-	console_prompt(fd);
 }
 
 
@@ -32,6 +30,5 @@ void console_run(KFile *fd) {
 void console_init(KFile *fd) {
 	parser_init();
 	command_init();
-	console_prompt(fd);
 }
 
