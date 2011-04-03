@@ -26,6 +26,7 @@
 
 #include <io/kfile.h>
 
+void controlCalibration(void);
 void controlSetup(void);
 void controlLoop(void);
 

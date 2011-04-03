@@ -22,6 +22,7 @@
 #include "control.h"
 
 #include "console.h"
+#include "command.h"
 #include "eeprom.h"
 #include "gsm.h"
 
@@ -41,8 +42,8 @@
 #define LOG_FORMAT  LOG_FMT_TERSE
 #include <cfg/log.h>
 
-//#define DB(x) x
-#define DB(x)
+#define DB(x) x
+//#define DB(x)
 #define SMS_(x) x
 //#define SMS_(x)
 
@@ -59,19 +60,34 @@ static uint8_t needCalibration(uint8_t ch);
 static void calibrate(uint8_t ch);
 static void monitor(uint8_t ch);
 
+// The list of timer shcedulated tasks
 List timers_lst;
+
+// The serial port used for console commands
+extern Serial dbg_port;
 
 //=====[ SMS handling ]=========================================================
 // The timer to schedule SMS handling task
 Timer sms_tmr;
 // The event to handle SMS checking
 Event sms_evt;
+// The SMS message
+gsmSMSMessage_t msg;
 // The task to process SMS events
 static void sms_task(iptr_t timer) {
 	//Silence "args not used" warning.
 	(void)timer;
+	int8_t smsIndex = 0;
 
 	kprintf("Check SMS\n");
+
+	// Retrive the first SMS into memory
+	SMS_(smsIndex = gsmSMSByIndex(&msg, 1));
+	if (smsIndex==1) {
+		command_parse(&dbg_port.fd, msg.text);
+		timer_delay(500);
+		SMS_(gsmSMSDel(1));
+	}
 
 	// Reschedule this timer
 	synctimer_add(&sms_tmr, &timers_lst);
@@ -79,8 +95,6 @@ static void sms_task(iptr_t timer) {
 
 //=====[ Console handling ]=====================================================
 
-// The serial port used for console commands
-extern Serial dbg_port;
 // The timer to schedule Console handling task
 Timer cmd_tmr;
 // The evento to handle Console events
@@ -92,9 +106,9 @@ static void cmd_task(iptr_t timer) {
 	//Silence "args not used" warning.
 	(void)timer;
 
-	kprintf("Processing CMD...\n");
+	//kprintf("Parse CMD\n");
 	//console_run((KFile*)(evt->Ev.Int.user_data));
-	//console_run(&dbg_port.fd);
+	console_run(&dbg_port.fd);
 
 	// Reschedule this timer
 	synctimer_add(&cmd_tmr, &timers_lst);
@@ -103,7 +117,7 @@ static void cmd_task(iptr_t timer) {
 
 //=====[ Channels Data ]========================================================
 
-#define CALIBRATION_SAMPLES 64
+#define CALIBRATION_SAMPLES 32
 
 #define chEnabled(CH) (chMask & BV16(CH))
 #define chUncalibrated(CH) (chCalib & BV16(CH))
@@ -146,6 +160,9 @@ static chData_t chData[16];
 
 /** The minimum load loss to notify a FAULT */
 const uint32_t loadFault = 6000l;
+
+/** The buffer defined by the GSM module */
+extern char cmdBuff[161];
 
 //=====[ Channel Selection ]====================================================
 
@@ -258,6 +275,14 @@ static inline void chRecalibrate(uint8_t ch) {
 	chMarkUncalibrated(ch);
 }
 
+void controlCalibration(void) {
+
+	LOG_WARN("Forcing calibration\r\n");
+	for (uint8_t ch=0; ch<16; ch++) {
+		chRecalibrate(ch);
+	}
+}
+
 /** @brief Defines the calibration policy for each channel */
 static void calibrate(uint8_t ch) {
 
@@ -279,6 +304,7 @@ static void calibrate(uint8_t ch) {
 
 	//----- Load increased... update current Imax -----
 	kprintf("CH[%hd]: calibrating...\r\n", ch);
+	chData[ch].calSamples = CALIBRATION_SAMPLES;
 
 	// Avoid recording load peak
 	if ((chData[ch].Icur-chData[ch].Imax) > loadFault) {
@@ -308,7 +334,7 @@ static inline uint8_t chLoadLoss(uint8_t ch) {
 
 static void notifyLoss(uint8_t ch) {
 	char dst[MAX_SMS_NUM];
-	char msg[MAX_MSG_TEXT];
+	char *msg = cmdBuff;
 	uint8_t idx;
 	uint8_t len;
 
@@ -328,6 +354,8 @@ static void notifyLoss(uint8_t ch) {
 		SMS_(gsmSMSSend(dst, msg));
 	}
 
+	// Wait for SMS being delivered
+	timer_delay(10000);
 }
 
 /** @brief Defines the monitoring policy for each channel */
@@ -356,6 +384,7 @@ void controlSetup(void) {
 	LIST_INIT(&timers_lst);
 
 	// Schedule SMS handling task
+	SMS_(gsmSMSDelRead());
 	timer_setDelay(&sms_tmr, ms_to_ticks(SMS_CHECK_SEC*1000));
 	timer_setSoftint(&sms_tmr, sms_task, (iptr_t)&sms_tmr);
 	synctimer_add(&sms_tmr, &timers_lst);
@@ -366,6 +395,7 @@ void controlSetup(void) {
 	synctimer_add(&cmd_tmr, &timers_lst);
 
 	// Setup console RX timeout
+	console_init(&dbg_port.fd);
 	ser_settimeouts(&dbg_port, 0, 1000);
 
 	// Dump EEPROM configuration
@@ -395,7 +425,7 @@ void controlLoop(void) {
 	}
 
 	// Schedule timer activities (SMS and Console checking)
-	//synctimer_poll(&timers_lst);
+	synctimer_poll(&timers_lst);
 
 }
 
