@@ -1,5 +1,6 @@
 
 #include "command.h"
+#include "control.h"
 #include "eeprom.h"
 
 #include "cmd_ctor.h"  // MAKE_CMD, REGISTER_CMD
@@ -11,11 +12,15 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h> // sprintf
 
 // Define logging settingl (for cfg/log.h module).
 #define LOG_LEVEL   LOG_LVL_INFO
 #define LOG_FORMAT  LOG_FMT_TERSE
 #include <cfg/log.h>
+
+/** The buffer for command responces SMS formatting */
+char cmdBuff[161];
 
 /*
  * Commands.
@@ -62,6 +67,8 @@ MAKE_CMD(reset, "", "",
 //----- CMD: PRINT HELP (console only)
 MAKE_CMD(help, "", "",
 ({
+	//Silence "args not used" warning.
+	(void)args;
 	LOG_INFO("%s", args[0].s);
 
 	RC_OK;
@@ -70,8 +77,8 @@ MAKE_CMD(help, "", "",
 //----- CMD: NUMBER ADD
 MAKE_CMD(add, "ds", "",
 ({
-	LOG_INFO("%s: Pos(%02ld) Num(%s)[%d]\n",
-		args[0].s, args[1].l, args[2].s, strlen(args[2].s));
+	LOG_INFO("<= Aggiungi numero %ld) %s)\r\n",
+		args[1].l, args[2].s);
 	ee_setSmsDest(args[1].l, args[2].s);
 	RC_OK;
 }), 0)
@@ -79,8 +86,8 @@ MAKE_CMD(add, "ds", "",
 //----- CMD: NUMBER DEL
 MAKE_CMD(del, "d", "",
 ({
-	LOG_INFO("%s: Pos(%02ld)\n",
-		args[0].s, args[1].l);
+	LOG_INFO("<= Rimuovi numero %ld)\r\n",
+		args[1].l);
 	ee_setSmsDest(args[1].l, EMPTY_NUMBER);
 	RC_OK;
 }), 0)
@@ -90,15 +97,20 @@ MAKE_CMD(del, "d", "",
 MAKE_CMD(num, "", "s",
 ({
 	char buff[MAX_SMS_NUM];
+	uint8_t len = 0;
 
-	LOG_INFO("%s:\n",
-		args[0].s);
-
+	sprintf(cmdBuff, "Destinatari SMS: ");
 	for (uint8_t i=0; i<MAX_SMS_DEST; i++) {
 		ee_getSmsDest(i, buff, MAX_SMS_NUM);
-		LOG_INFO("SMS[%d]: %s\r\n", i, buff);
+
+		len = strlen(cmdBuff);
+		sprintf(cmdBuff+len, "%d) %s; ", i, buff);
+
 		timer_delay(5);
 	}
+
+	LOG_INFO("=> %s\r\n", cmdBuff);
+	args[1].s = cmdBuff;
 
 	RC_OK;
 }), 0)
@@ -107,8 +119,8 @@ MAKE_CMD(num, "", "s",
 //----- CMD: MESSAGE SET
 MAKE_CMD(msgw, "t", "",
 ({
-	LOG_INFO("%s: Text(%s)",
-		args[0].s, args[1].s);
+	LOG_INFO("<= Imposta test SMS: %s\r\n",
+		args[1].s);
 	ee_setSmsText(args[1].s);
 	RC_OK;
 }), 0)
@@ -120,15 +132,19 @@ MAKE_CMD(msgr, "", "s",
 	char buff[MAX_MSG_TEXT];
 
 	ee_getSmsText(buff, MAX_MSG_TEXT);
-	LOG_INFO("%s: Text(%s)",
-		args[0].s, buff);
+	sprintf(cmdBuff, "Testo SMS: %s ", buff);
+	LOG_INFO("=> %s\r\n", cmdBuff);
+	args[1].s = cmdBuff;
+
 	RC_OK;
 }), 0)
 ;
 //----- CMD: RESET
 MAKE_CMD(rst, "", "",
 ({
-	LOG_INFO("%s", args[0].s);
+	//Silence "args not used" warning.
+	(void)args;
+	LOG_INFO("<= Reset\r\n");
 
 	RC_OK;
 }), 0)
@@ -137,8 +153,10 @@ MAKE_CMD(rst, "", "",
 //----- CMD: MODE CALIBRATION
 MAKE_CMD(cal, "", "",
 ({
-	LOG_INFO("%s", args[0].s);
-
+	//Silence "args not used" warning.
+	(void)args;
+	LOG_INFO("<= Calibrazione\r\n");
+	controlCalibration();
 	RC_OK;
 }), 0)
 ;
@@ -146,7 +164,9 @@ MAKE_CMD(cal, "", "",
 //----- CMD: MODE MONITORING
 MAKE_CMD(go, "", "",
 ({
-	LOG_INFO("%s", args[0].s);
+	//Silence "args not used" warning.
+	(void)args;
+	LOG_INFO("<= Monitoraggio\r\n");
 
 	RC_OK;
 }), 0)
@@ -155,7 +175,9 @@ MAKE_CMD(go, "", "",
 //----- CMD: STATUS
 MAKE_CMD(sta, "", "s",
 ({
-	LOG_INFO("%s", args[0].s);
+	sprintf(cmdBuff, "Stato: ");
+	LOG_INFO("=> %s\r\n", cmdBuff);
+	args[1].s = cmdBuff;
 
 	RC_OK;
 }), 0)
