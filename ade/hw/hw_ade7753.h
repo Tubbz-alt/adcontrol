@@ -64,12 +64,12 @@
 #define ADE7753_CS_HIGH()        do {\
 	PORTB |= _BV(PB4);\
 	PORTC &= ~_BV(PC2);\
-	PORTA |= (_BV(PA4) | _BV(PA5));\
+	PORTA |= _BV(PA5);\
 } while(0)
 #define ADE7753_CS_LOW()         do {\
 	PORTB &= ~_BV(PB4);\
 	PORTC |= _BV(PC2);\
-	PORTA &= ~(_BV(PA4) | _BV(PA5));\
+	PORTA &= ~_BV(PA5);\
 } while(0)
 /*@}*/
 
@@ -79,7 +79,7 @@
 INLINE void meter_ade7753_hw_bus_init(void)
 {
 	/* Implement me! */
-	DDRA |= (_BV(PA4) | _BV(PA5));
+	DDRA |= _BV(PA5);
 	ADE7753_CS_HIGH();
 }
 
