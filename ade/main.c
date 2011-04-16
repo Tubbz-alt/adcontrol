@@ -15,15 +15,18 @@
 #include <cpu/irq.h>
 
 #include <drv/meter_ade7753.h>
+#include <drv/pca9555.h>
 #include <drv/ser.h>
 #include <drv/timer.h>
-
 
 #include <verstag.h>
 
 static Serial spi_port;
 static Serial gsm_port;
 Serial dbg_port;
+
+I2c i2c_bus;
+Pca9555 pe;
 
 static void init(void) {
 
@@ -49,6 +52,10 @@ int main(void) {
 	/* Open the Console port */
 	ser_init(&dbg_port, SER_UART0);
 	ser_setbaudrate(&dbg_port, 115200);
+
+	/* Initialize I2C bus and PCA9555 (addr=0) */
+	i2c_init(&i2c_bus, I2C0, CONFIG_I2C_FREQ);
+	pca9555_init(&i2c_bus, &pe, 0);
 
 	/* Open the GSM port */
 	ser_init(&gsm_port, SER_UART1);

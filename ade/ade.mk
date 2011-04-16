@@ -26,8 +26,11 @@ ade_WIZARD_CSRC = \
 	bertos/mware/sprintf.c \
 	bertos/drv/timer.c \
 	bertos/mware/event.c \
-	bertos/cpu/avr/drv/ser_avr.c \
 	bertos/drv/ser.c \
+	bertos/cpu/avr/drv/ser_avr.c \
+	bertos/drv/i2c.c \
+	bertos/cpu/avr/drv/i2c_avr.c \
+	bertos/drv/pca9555.c \
 	bertos/mware/hex.c \
 	bertos/mware/parser.c \
 	bertos/struct/hashtable.c \
