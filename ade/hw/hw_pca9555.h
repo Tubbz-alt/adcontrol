@@ -26,58 +26,30 @@
  * invalidate any other reasons why the executable file might be covered by
  * the GNU General Public License.
  *
- * Copyright 2008 Develer S.r.l. (http://www.develer.com/)
+ * Copyright 2003, 2004, 2006, 2008 Develer S.r.l. (http://www.develer.com/)
+ * Copyright 2000 Bernie Innocenti <bernie@codewiz.org>
  * All Rights Reserved.
  * -->
  *
- * \brief Configuration file for I2C module.
+ * \brief Macro for PCA9555 I2C port expander module
  *
- * \author Daniele Basile <asterix@develer.com>
+ * \author Patrick Bellasi <derkling@gmail.com>
  */
 
-#ifndef CFG_I2C_H
-#define CFG_I2C_H
+#ifndef HW_PCA9555_H
+#define HW_PCA9555_H
+
+//#warning TODO:This is an example implementation, you must implement it!
+#include <avr/io.h>
 
 /**
-*Comunication frequency.
-*
-* $WIZ$ type = "int"
-*/
-#define CONFIG_I2C_FREQ  100000UL
-
-/**
- * I2C start timeout.
- * For how many milliseconds the i2c_start
- * should try to get an ACK before
- * returning error.
- *
- * $WIZ$ type = "int"
+ * This macro should set INT line as pulled-up input
  */
-#define CONFIG_I2C_START_TIMEOUT 100
-
-/**
- * Check this to disable I2c deprecated API support.
- *
- * $WIZ$ type = "boolean"
- */
-#define CONFIG_I2C_DISABLE_OLD_API   1
-
-/**
- * Module logging level.
- *
- * $WIZ$ type = "enum"
- * $WIZ$ value_list = "log_level"
- */
-#define I2C_LOG_LEVEL      LOG_LVL_INFO
-
-/**
- * module logging format.
- *
- * $WIZ$ type = "enum"
- * $WIZ$ value_list = "log_format"
- */
-#define I2C_LOG_FORMAT     LOG_FMT_TERSE
-
-#endif /* CFG_I2C_H */
+//#define PCA9555_HW_INIT do { /* Implement me! */ } while (0)
+#define PCA9555_HW_INIT() do {\
+	PORTA |=  BV(PA4);\
+	DDRA  &= ~BV(PA4);\
+} while (0)
 
 
+#endif /* HW_PCA9555_H */

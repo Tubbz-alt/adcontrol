@@ -30,37 +30,13 @@
  * All Rights Reserved.
  * -->
  *
- * \brief Configuration file for I2C module.
+ * \brief Configuration file for PCA9555 module.
  *
- * \author Daniele Basile <asterix@develer.com>
+ * \author Patrick Bellasi <derkling@gmail.com>
  */
 
-#ifndef CFG_I2C_H
-#define CFG_I2C_H
-
-/**
-*Comunication frequency.
-*
-* $WIZ$ type = "int"
-*/
-#define CONFIG_I2C_FREQ  100000UL
-
-/**
- * I2C start timeout.
- * For how many milliseconds the i2c_start
- * should try to get an ACK before
- * returning error.
- *
- * $WIZ$ type = "int"
- */
-#define CONFIG_I2C_START_TIMEOUT 100
-
-/**
- * Check this to disable I2c deprecated API support.
- *
- * $WIZ$ type = "boolean"
- */
-#define CONFIG_I2C_DISABLE_OLD_API   1
+#ifndef CFG_PCA9555_H
+#define CFG_PCA9555_H
 
 /**
  * Module logging level.
@@ -68,7 +44,7 @@
  * $WIZ$ type = "enum"
  * $WIZ$ value_list = "log_level"
  */
-#define I2C_LOG_LEVEL      LOG_LVL_INFO
+#define PCA9555_LOG_LEVEL      LOG_LVL_INFO
 
 /**
  * module logging format.
@@ -76,8 +52,8 @@
  * $WIZ$ type = "enum"
  * $WIZ$ value_list = "log_format"
  */
-#define I2C_LOG_FORMAT     LOG_FMT_TERSE
+#define PCA9555_LOG_FORMAT     LOG_FMT_TERSE
 
-#endif /* CFG_I2C_H */
+#endif /* CFG_PCA9555_H */
 
 
