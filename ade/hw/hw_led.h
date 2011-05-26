@@ -38,25 +38,33 @@
 #ifndef HW_LED_H
 #define HW_LED_H
 
-#warning FIXME: This is an example implementation, you must implement it
+#include <avr/io.h>
 
-#define LED_ON()   do {\
-	PORTC |= 0x01;\
-} while(0)
-#define LED_OFF()  do {\
-	PORTC &= ~0x01;\
-} while(0)
-#define LED_SWITCH()  do {\
-	volatile uint8_t reg = PORTC;\
-	if (reg & 0x01)\
-		PORTC &= ~0x01;\
-	else\
-		PORTC |= 0x01;\
+#define LED_ON()		(PORTB &= ~BV8(PB1))
+#define LED_OFF()		(PORTB |=  BV8(PB1))
+#define LED_SWITCH()	(PINB  |=  BV8(PB1))
+
+#define LED_GSM_CSQ(level) do {\
+	volatile uint8_t reg = PORTA;\
+	PORTA = ((reg | 0xF0) & ~BV8(4+(level)));\
 } while(0)
 
-#define LED_INIT()      do {\
-	DDRC  = _BV(0)|_BV(1)|_BV(2);\
-	PORTC = 0x00;\
+#define LED_NOTIFY_ON()  PORTA &= ~0xF0
+#define LED_NOTIFY_OFF() PORTA |=  0xF0
+
+#define ERR_ON()		(PORTB |=  BV8(PB0))
+#define ERR_OFF()		(PORTB &= ~BV8(PB0))
+
+#define LED_INIT() do {\
+	/* Function LED */\
+	DDRB  |=  BV8(PB1);\
+	PORTB |=  BV8(PB1);\
+	/* Fault LED (and rele) */\
+	DDRB  |=  BV8(PB0);\
+	PORTB &= ~BV8(PB0);\
+	/* GMS Link status*/\
+	DDRA  |= (BV8(PB4)|BV8(PB5)|BV8(PB6)|BV8(PB7));\
+	PORTA |= (BV8(PB4)|BV8(PB5)|BV8(PB6)|BV8(PB7));\
 } while(0)
 
 #endif /* HW_LED_H */
