@@ -1,11 +1,27 @@
-/*
-  gms.c - Interface to a serial GSM
-  Copyright (c) 201o Patrick Bellasi.  All right reserved.
-*/
+/**
+ *       @file  gsm.c
+ *      @brief  Interface to a serial GSM
+ *
+ * This provides a driver for the SIM900 GSM module by SIMCom.
+ * The current implementation support basic SMS send/receive command as well
+ * as GPRS connection setup and data exchange.
+ *
+ *     @author  Patrick Bellasi (derkling), derkling@google.com
+ *
+ *   @internal
+ *     Created  05/18/2011
+ *    Revision  $Id: doxygen.templates,v 1.3 2010/07/06 09:20:12 mehner Exp $
+ *    Compiler  gcc/g++
+ *     Company  Politecnico di Milano
+ *   Copyright  Copyright (c) 2011, Patrick Bellasi
+ *
+ * This source code is released for free distribution under the terms of the
+ * GNU General Public License as published by the Free Software Foundation.
+ * ============================================================================
+ */
 
 #include "gsm.h"
 
-#include "cfg/cfg_gsm.h"
 #include "hw/hw_gsm.h"
 
 #include <cfg/compiler.h>
@@ -20,7 +36,7 @@
 #include <cfg/log.h>
 
 /* Define  debugging utility function */
-#ifdef CONFIG_GSM_DEBUG
+#if CONFIG_GSM_DEBUG
 # define gsmDebug(STR, ...)   LOG_INFO("GSM: "STR, ## __VA_ARGS__);
 #else
 # define gsmDebug(STR, ...)
@@ -28,7 +44,7 @@
 
 /*----- GSM Locales -----*/
 
-static gsmConf_t gsmConf = {
+gsmConf_t gsmConf = {
 	.creg_stat = UNKNOW,
 	.creg_try = DEFAULT_CREG_TRY,
 	.creg_wait = DEFAULT_CREG_WAIT,
@@ -48,7 +64,51 @@ static int8_t _gsmRead(char *resp, uint8_t size);
 static int8_t _gsmReadResult(void);
 static int8_t _gsmWrite(const char *cmd, size_t count);
 static int8_t _gsmWriteLine(const char *cmd);
-static void   _gsmPrintResult(uint8_t result);
+
+#if CONFIG_GSM_DEBUG
+static void _gsmPrintResult(uint8_t result)
+{
+	switch(result) {
+	case 0:
+		gsmDebug("%d: OK\n", result);
+		break;
+	case 1:
+		gsmDebug("%d: CONNECT\n", result);
+		break;
+	case 2:
+		gsmDebug("%d: RING\n", result);
+		break;
+	case 3:
+		gsmDebug("%d: NO CARRIER\n", result);
+		break;
+	case 4:
+		gsmDebug("%d: ERROR\n", result);
+		break;
+	case 6:
+		gsmDebug("%d: NO DIALTONE\n", result);
+		break;
+	case 7:
+		gsmDebug("%d: BUSY\n", result);
+		break;
+	case 8:
+		gsmDebug("%d: NO ANSWER\n", result);
+		break;
+	case 9:
+		gsmDebug("%d: PROCEEDING\n", result);
+		break;
+	case 10:
+		gsmDebug("%d: NO RESPONSE\n", result);
+		break;
+	default:
+		gsmDebug("%d: UNDEF\n", result);
+		break;
+	}
+
+}
+#else
+# define _gsmPrintResult(result)
+#endif
+
 
 /*----- GSM Control Interface -----*/
 
@@ -79,6 +139,7 @@ static int8_t gsmAutobaud(void)
 
 	// Send AT command for autobaud
 	gsmDebug("Autobauding...\n");
+
 	for(try=3; try; try--) {
 		_gsmWriteLine("AT");
 		_gsmRead(buff, 8);
@@ -87,13 +148,12 @@ static int8_t gsmAutobaud(void)
 			gsmDebug("DONE\n");
 			return resp;
 		}
-
 		gsmDebug("FAILED\n");
 	}
 	return ERROR;
 }
 #else
-#define gsmAutobaud() OK
+# define gsmAutobaud() OK
 #endif
 
 static int8_t gsmConfigure(void)
@@ -123,13 +183,28 @@ int8_t gsmPowerOn(void)
 {
 	int8_t result;
 
+	// TODO: check if the modem is already on
+	// either using the STATUS line or by sending an AT command
+	if (gsm_statusIn()) {
+#if 0
+		// Modem already ON... checking AT command
+		_gsmWriteLine("AT");
+		result = _gsmReadResult();
+		if (result == OK)
+			return result;
+#endif
+		// Not responding to AT comand... shut-down
+		gsm_powerOff();
+		timer_delay(10000);
+	}
+
 	LOG_INFO("GSM: Powering-on...\n");
 	gsm_powerOn();
 
 	// When DCE powers on with the autobauding enabled, it is recommended
 	// to wait 2 to 3 seconds before sending the first AT character.
-	LOG_INFO("Wait (15s) for network attachment\n");
-	timer_delay(15000);
+	LOG_INFO("Wait (20s) for network attachment\n");
+	timer_delay(20000);
 
 	result = gsmAutobaud();
 	if (result != OK)
@@ -202,7 +277,7 @@ int8_t gsmGetNetworkParameters(void)
 	_gsmReadResult();
 
 #if 0
-#ifdef CONFIG_GSM_DEBUG
+#if CONFIG_GSM_DEBUG
 	snprintf(buff, 64, "lac: %05u, mnc: %02u, cid: 0x%02x, mcc: %u",
 			gsmConf.cell.neigh[0].lac,
 			gsmConf.cell.mnc,
@@ -217,7 +292,7 @@ int8_t gsmGetNetworkParameters(void)
 }
 
 // Update the "Signal Quality Report"
-static uint8_t gsmUpdateCSQ(void)
+uint8_t gsmUpdateCSQ(void)
 {
 	int8_t resp;
 	char buff[16];
@@ -230,19 +305,13 @@ static uint8_t gsmUpdateCSQ(void)
 		gsmConf.ber = 99;
 		return resp;
 	}
-#if 0
-	sscanf(buff, "+CSQ: %hhu,%hhu",
-			&gsmConf.rssi,
-			&gsmConf.ber);
 
-#ifdef CONFIG_GSM_DEBUG
-	sprintf(buff, "CSQ<=%02hhu,%02hhu", gsmConf.rssi, gsmConf.ber);
-	gsmDebugLine(buff);
-#endif
-#else
-#warning FIXME scan RSSI and BER values
-#endif
+	sscanf(buff, "+CSQ: %hu,%hu",
+			(short unsigned int*)&gsmConf.rssi,
+			(short unsigned int*)&gsmConf.ber);
 
+	gsmDebug("CSQ [%hu]\r\n", gsmConf.rssi);
+	
 	return resp;
 
 }
@@ -372,50 +441,6 @@ static int8_t _gsmReadResult()
 	return result;
 }
 
-#ifdef CONFIG_GSM_DEBUG
-static void _gsmPrintResult(uint8_t result)
-{
-	switch(result) {
-	case 0:
-		gsmDebug("%d: OK\n", result);
-		break;
-	case 1:
-		gsmDebug("%d: CONNECT\n", result);
-		break;
-	case 2:
-		gsmDebug("%d: RING\n", result);
-		break;
-	case 3:
-		gsmDebug("%d: NO CARRIER\n", result);
-		break;
-	case 4:
-		gsmDebug("%d: ERROR\n", result);
-		break;
-	case 6:
-		gsmDebug("%d: NO DIALTONE\n", result);
-		break;
-	case 7:
-		gsmDebug("%d: BUSY\n", result);
-		break;
-	case 8:
-		gsmDebug("%d: NO ANSWER\n", result);
-		break;
-	case 9:
-		gsmDebug("%d: PROCEEDING\n", result);
-		break;
-	case 10:
-		gsmDebug("%d: NO RESPONSE\n", result);
-		break;
-	default:
-		gsmDebug("%d: UNDEF\n", result);
-		break;
-	}
-
-}
-#else
-# define _gsmPrintResult(result) do { } while(0)
-#endif
-
 
 /*----- GSM SMS Interface -----*/
 
@@ -442,6 +467,9 @@ int8_t gsmSMSConf(uint8_t load)
 		gsmDebug("Fail, set Text Mode\n");
 		return ERROR;
 	}
+
+#warning DISABLED SOME SMS CONFIGURATION SETTING
+return OK;
 
 	// Select TE (GMS) Character Set
 	_gsmWriteLine("AT+CSCS=\"GSM\"");
@@ -752,22 +780,25 @@ int8_t gsmGetNewMessage(gsmSMSMessage_t * msg) {
 	return 0;
 }
 
-
-void gsmPortingTest(Serial *port) {
+#if CONFIG_GSM_TESTING
+# warning GSM TESTING ENABLED
+void NORETURN gsmTesting(Serial *port) {
 
 	gsmInit(port);
 	gsmPowerOn();
+	gsmSMSConf(0);
 
 	//gsmUpdateConf();
 	//timer_delay(1000);
 
-	gsmSMSConf(0);
 	//timer_delay(5000);
 	//gsmSMSSend("+393473153808", "Test message from RFN");
 	while (1) {
-		gsmSMSSend("+393473153808", "Test message from RFN");
+		gsmUpdateCSQ();
+		timer_delay(5000);
+		//gsmSMSSend("+393473153808", "Test message from RFN");
 		//gsmSMSSend("+393357963938", "Test message from RFN");
-		timer_delay(10000);
+		//timer_delay(10000);
 	}
 
 //  Prova invio messaggio molto lungo, che impiega tutti i 160 caratteri a
@@ -799,7 +830,7 @@ void gsmPortingTest(Serial *port) {
 	timer_delay(15000);
 	gsmPowerOff();
 }
-
+#endif
 
 
 
@@ -846,7 +877,7 @@ static int8_t _gsmWriteData(uint8_t *data, uint8_t len, uint16_t rdelay)
 }
 
 
-#ifdef CONFIG_GSM_DEBUG
+#if CONFIG_GSM_DEBUG
 // This is an endless loop polling the modem for generated messages
 static void _gsmReadLoop(void)
 {
@@ -881,7 +912,7 @@ static uint8_t gsmUpdateCREG(void)
 	sscanf(buff, "+CREG: %hhu,%hhu",
 			&gsmConf.creg_n,
 			&gsmConf.creg_stat);
-#ifdef CONFIG_GSM_DEBUG
+#if CONFIG_GSM_DEBUG
 	sprintf(buff, "CREG<=%02hhu,%02hhu", gsmConf.creg_n, gsmConf.creg_stat);
 	gsmDebugLine(buff);
 #endif
@@ -963,7 +994,7 @@ static int8_t gsmAttachGPRS(void)
 
 	/* TODO: handle GPRS attach if in detached mode */
 
-#ifdef CONFIG_GSM_DEBUG
+#if CONFIG_GSM_DEBUG
 	sprintf(buff, "CGATT<=%02hhu", gsmConf.cgatt);
 	gsmDebugLine(buff);
 #endif
@@ -1039,7 +1070,7 @@ static int8_t gsmUpdateStatus(void)
 		break;
 	}
 
-#ifdef CONFIG_GSM_DEBUG
+#if CONFIG_GSM_DEBUG
 	sprintf(buff, "STATE<=%02hhu", gsmConf.state);
 	gsmDebugLine(buff);
 #endif
@@ -1092,7 +1123,7 @@ static int8_t gsmWirelessUp(void)
 static uint8_t gsmUpdateIP(void)
 {
 	int8_t resp;
-#ifdef CONFIG_GSM_DEBUG
+#if CONFIG_GSM_DEBUG
 	char buff[32];
 #endif
 
@@ -1112,7 +1143,7 @@ static uint8_t gsmUpdateIP(void)
 		return ERROR;
 	}
 
-#ifdef CONFIG_GSM_DEBUG
+#if CONFIG_GSM_DEBUG
 	snprintf(buff, 32, "IP<=%s", gsmConf.ip);
 	gsmDebugLine(buff);
 #endif
@@ -1277,7 +1308,7 @@ int8_t gsmGetNetworkParameters(void)
 	_gsmWriteLine("AT+CMGF=1", 500);
 	_gsmReadResult();
 
-#ifdef CONFIG_GSM_DEBUG
+#if CONFIG_GSM_DEBUG
 	snprintf(buff, 64, "lac: %05u, mnc: %02u, cid: 0x%02x, mcc: %u",
 			gsmConf.cell.neigh[0].lac,
 			gsmConf.cell.mnc,

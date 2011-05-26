@@ -9,6 +9,8 @@
 #include <io/kfile.h>
 #include <drv/ser.h>
 
+#include "cfg/cfg_gsm.h"
+
 /* Network Params */
 typedef struct gsmCellNeighbor {
 	uint16_t arfcn;
@@ -82,6 +84,8 @@ typedef struct gsmConf {
 #define DEFAULT_SMS_SERVER "+393473153808"
 } gsmConf_t;
 
+extern gsmConf_t gsmConf;
+
 /* Modem commands results */
 typedef enum gsmConnectResult {
 	OK = 0,
@@ -134,8 +138,11 @@ typedef struct gsmSMSMessage {
 	char text[161];
 } gsmSMSMessage_t;
 
-
-void gsmPortingTest(Serial *port);
+#if CONFIG_GSM_TESTING
+void gsmTesting(Serial *port);
+#else
+# define gsmTesting(port)
+#endif
 
 /* GSM Control Interface */
 void gsmInit(Serial *port);
@@ -144,6 +151,11 @@ int8_t gsmPowerOn(void);
 void gsmPowerOff(void);
 void gsmUpdateConf(void);
 int8_t gsmGetNetworkParameters(void);
+
+
+/*----- GSM Status Interface -----*/
+#define gsmCSQ() gsmConf.rssi
+uint8_t gsmUpdateCSQ(void);
 
 /*----- GSM SMS Interface -----*/
 int8_t gsmSMSConf(uint8_t load);

@@ -39,7 +39,7 @@
 #ifndef HW_GMS_H
 #define HW_GMS_H
 
-#warning TODO:This is an example implementation, you must implement it!
+//#warning TODO:This is an example implementation, you must implement it!
 
 #include <cfg/compiler.h>
 //#include <cfg/macros.h>
@@ -47,15 +47,15 @@
 #include <drv/timer.h>
 #include <avr/io.h>
 
+#define STATUS_DIR   DDRD
+#define STATUS_PORT  PORTD
+#define STATUS_PIN   PD4
 #define POWER_DIR    DDRD
 #define POWER_PORT   PORTD
-#define POWER_PIN    PD4
+#define POWER_PIN    PD5
 #define RESET_DIR    DDRD
 #define RESET_PORT   PORTD
-#define RESET_PIN    PD5
-#define STATUS_DIR   DDRA
-#define STATUS_PORT  PORTA
-#define STATUS_PIN   PA7
+#define RESET_PIN    PD6
 
 #define SET_LOW(SIG)  (BIT_CHANGE(SIG##_PORT, (SIG##_PIN, 0)))
 #define SET_HIGH(SIG) (BIT_CHANGE(SIG##_PORT, (SIG##_PIN, 1)))
@@ -65,19 +65,19 @@
 
 INLINE uint8_t gsm_statusIn(void)
 {
-	return (PINA & BV(PA7));
+	return (PIND & BV8(PD4));
 }
 
 INLINE void gsm_powerOn(void)
 {
 	while ( !gsm_statusIn() ) {
-		PORTD &= ~BV(PD4);
-		DDRD |= BV(PD4);
+		PORTD &= ~BV8(PD5);
+		DDRD |= BV8(PD5);
 		//SET_LOW(POWER);
 		//SET_OUT(POWER);
 		timer_delay(1500);
 		//SET_IN(POWER);
-		DDRD &= ~BV(PD4);
+		DDRD &= ~BV8(PD5);
 		timer_delay(2500);
 	}
 }
@@ -85,13 +85,13 @@ INLINE void gsm_powerOn(void)
 INLINE void gsm_powerOff(void)
 {
 	while ( gsm_statusIn() ) {
-		PORTD &= ~BV(PD4);
-		DDRD |= BV(PD4);
+		PORTD &= ~BV8(PD5);
+		DDRD |= BV8(PD5);
 		//SET_LOW(POWER);
 		//SET_OUT(POWER);
 		timer_delay(1500);
 		//SET_IN(POWER);
-		DDRD &= ~BV(PD4);
+		DDRD &= ~BV8(PD5);
 		timer_delay(2000);
 	}
 
@@ -106,17 +106,19 @@ INLINE void gsm_reset(void)
 	timer_delay(2000);
 }
 
-
 /**
  * This macro should initialized the GSM controlling pins.
  */
 INLINE void gsm_init(void)
 {
-	DDRD &= ~(BV(PD4)|BV(PD5));
+// RST PD6
+// PWR PD5
+// STS PD4
+	DDRD &= ~(BV8(PD4)|BV8(PD5)|BV8(PD6));
 	//SET_IN(RESET);
 	//SET_IN(POWER);
-	DDRA &= ~(BV(PA7));
 	//SET_IN(STATUS);
+	PORTD &= ~(BV8(PD2)|BV8(PD3));
 }
 
 #endif /* HW_GSM_H */

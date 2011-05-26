@@ -45,6 +45,12 @@
  */
 #define CONFIG_GSM_DEBUG   0
 
+/**
+ * Check this to enable GSM testing port
+ *
+ * $WIZ$ type = "boolean"
+ */
+#define CONFIG_GSM_TESTING 	0
 
 /**
  * GSM autobaud for UART port
