@@ -123,10 +123,14 @@ typedef struct meter_conf {
 } meter_conf_t;
 
 void meter_ade7753_conf(meter_conf_t *conf);
+void meter_ade7753_dumpConf(void);
 
 uint32_t meter_ade7753_Irms(void);
-void meter_ade7753_Vrms(unsigned char *sample);
+uint32_t meter_ade7753_Vrms(void);
 void meter_ade7753_Power(unsigned char *sample);
+
+void meter_ade7753_setLCEA(uint8_t cycles);
+int32_t meter_ade7753_getEnergyLCAE(void);
 
 /*
 uint8_t meter_ade7753_read_reg8u(uint8_t reg, uint8_t *data);

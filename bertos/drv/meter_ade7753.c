@@ -59,7 +59,8 @@
 
 static struct KFile *spi;
 
-static void meter_read(unsigned char addr, unsigned char * data, unsigned char count)
+static void meter_read(unsigned char addr, unsigned char * data,
+		unsigned char count)
 {
 	LOG_INFO("%s: @%#02X\n", __func__, addr);
 
@@ -77,7 +78,8 @@ static void meter_read(unsigned char addr, unsigned char * data, unsigned char c
 	ADE7753_CS_HIGH();
 } 
 
-static void meter_write(unsigned char addr, unsigned char * data, unsigned char count)
+static void meter_write(unsigned char addr, unsigned char * data,
+		unsigned char count)
 {
 
 	LOG_INFO("%s: @%#02X\n", __func__, addr);
@@ -144,15 +146,15 @@ void meter_ade7753_conf(meter_conf_t *conf) {
 //        meter_read(ADE7753_IRMS, sample, 3);
 //}
 
-void meter_ade7753_Vrms(unsigned char *sample) {
-        meter_read(ADE7753_VRMS, sample, 3);
-}
+//void meter_ade7753_Vrms(unsigned char *sample) {
+//        meter_read(ADE7753_VRMS, sample, 3);
+//}
 
 void meter_ade7753_Power(unsigned char *sample) {
         meter_read(ADE7753_WAVEFORM, sample, 3);
 }
 
-uint32_t meter_ade7753_Irms() {
+uint32_t meter_ade7753_Irms(void) {
 	unsigned char irms[3];
 	uint32_t irms_value;
 
@@ -167,7 +169,104 @@ uint32_t meter_ade7753_Irms() {
 	return irms_value;
 }
 
+uint32_t meter_ade7753_Vrms(void) {
+	unsigned char vrms[3];
+	uint32_t vrms_value;
 
+    meter_read(0x17, vrms, 3);
+	vrms_value  = ((uint32_t)vrms[0]<<16)
+			+((uint32_t)vrms[1]<<8)
+			+(uint32_t)vrms[2];
+
+	LOG_INFO("Vrms=0x%02X%02X%02X=%08ld\n",
+			vrms[0], vrms[1], vrms[2], vrms_value);
+
+	return vrms_value;
+}
+/**
+ * @brief Enable Line Cycle Energy Accumulation mode
+ *
+ * @param the number of line cycles to use
+ */
+void meter_ade7753_setLCEA(uint8_t cycles) {
+	unsigned char linecyc[2];
+	uint16_t hc = cycles;
+
+	// Compute the number of half line cycles
+	hc <<= 1;
+	
+	// Configure the LINECYC register with the number of half line cycles
+	linecyc[0] = (unsigned char)(hc>>8);
+	linecyc[1] = (unsigned char)(hc & 0xFF);
+	meter_write(0x1C, linecyc, 2);
+
+	// Read back value for write check
+	DB(meter_read(0x1C, linecyc, 2));
+	LOG_INFO("Set LCAE [0x%02X%02X: %hd*2 half-cycles]\n",
+			linecyc[0], linecyc[1], cycles);
+
+}
+
+static int32_t meter_ade7753_LCAE(void) {
+	unsigned char lcae[3];
+	int32_t lcae_value;
+
+	// Read LAENERGY (register 0x04)
+    meter_read(0x04, lcae, 3);
+	lcae_value  = ((int32_t)lcae[0]<<16)
+			+((int32_t)lcae[1]<<8)
+			+(int32_t)lcae[2];
+
+	// Adjust sign (which is 24bit mod-2 signed)
+	if (lcae_value & 0x008000) {
+		lcae_value &= ~0x008000;
+		lcae_value |=  0x800000;
+	}
+
+	LOG_INFO("LCAE=0x%02X%02X%02X=%08ld\n",
+			lcae[0], lcae[1], lcae[2], lcae_value);
+
+	return lcae_value;
+}
+
+/**
+ * @brief Get the Energy accumulated in the specifued line cycles.
+ */
+int32_t meter_ade7753_getEnergyLCAE(void) {
+	unsigned char conf[2] = {
+		0x00,0x00};
+
+	// Resetting Interrupt status register
+	conf[0] = 0x00;
+	conf[1] = 0x00;
+	meter_write(0x0C, conf, 2);
+
+	// Read current configuration
+	meter_read(0x09, conf, 2);
+
+	// Setting Mode register bit 7 (CYCMODE)
+	conf[0] |= 0x01; 
+	meter_write(0x09, conf, 2);
+
+	// Dump ADE7753 configuration
+	DB(meter_ade7753_dumpConf());
+
+	// wait for a measurement to complete
+	// by polling the Interrupt register bit 3 (CYCEND)
+	for (uint8_t c = 0; ; c++) {//c<64; c++) { 
+		// Wait for next line cycle (@50Hz = 20ms ==> wait 1ms more)
+		timer_delay(21);
+		// Read the interrupt status register (0x0B)
+		meter_read(0x0B, conf, 2);
+		LOG_INFO("IRQs %#04X\r\n",
+				((uint16_t)conf[0]<<7|conf[1]));
+		if (conf[1] & 0x04)
+			break;
+	}
+
+	// read the Accumulated Energy
+	return meter_ade7753_LCAE();
+}
 
 
 /**
@@ -185,11 +284,12 @@ void meter_ade7753_reset(void)
 	unsigned char conf[2] = {
 		0x00,0x00};
 
-	// Software reset
+	// Software Chip Reset. A data transfer should not take place to the
+	// ADE7753 for at least 18 μs after a software reset.
 	conf[0] = 0x00;
 	conf[1] = 0x40;
 	meter_write(0x09, conf, 2);
-	timer_delay(100);
+	timer_delay(1);
 
 	// Load conf
 	//conf[0] = 0x00;
@@ -198,7 +298,7 @@ void meter_ade7753_reset(void)
 	meter_write(0x09, conf, 2);
 	//      conf[1] = (_BV(SWRST) | _BV(DISCF) | _BV(DISSAG));
 	//      meter_write(MODE, conf, 2);
-	timer_delay(100);
+	timer_delay(1);
 
 	// Enable all interrupts
 	conf[0] = 0xFF;
@@ -206,6 +306,23 @@ void meter_ade7753_reset(void)
 	meter_write(0x0A, conf, 2);
 
 }
+
+/**
+ * Dump ADE7753 configuration
+ */
+void meter_ade7753_dumpConf(void) {
+	meter_conf_t ade7753_conf;
+
+	LOG_INFO(".:: ADE7753 Conf\r\n");
+
+	meter_ade7753_conf(&ade7753_conf);
+	LOG_INFO("Rev: %#02X, Mode %#04X, IRQs %#04X\r\n",
+			ade7753_conf.rev,
+			(((uint16_t)ade7753_conf.mode[0]<<7)|ade7753_conf.mode[1]),
+			(((uint16_t)ade7753_conf.irqs[0]<<7)|ade7753_conf.irqs[1]));
+
+}
+
 
 MOD_DEFINE(meter_ade7753)
 
