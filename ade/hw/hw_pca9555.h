@@ -47,9 +47,8 @@
  */
 //#define PCA9555_HW_INIT do { /* Implement me! */ } while (0)
 #define PCA9555_HW_INIT() do {\
-	PORTA |=  BV(PA4);\
-	DDRA  &= ~BV(PA4);\
+	PORTC |=  BV8(PC2);\
+	DDRC  &= ~BV8(PC4);\
 } while (0)
-
 
 #endif /* HW_PCA9555_H */

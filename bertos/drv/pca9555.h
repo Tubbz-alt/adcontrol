@@ -42,6 +42,7 @@
 #define DRV_PCA9555_H
 
 #include "cfg/cfg_i2c.h"
+#include "cfg/cfg_pca9555.h"
 
 #include <cfg/compiler.h>
 
@@ -98,5 +99,12 @@ bool pca9555_put_4(I2c *i2c, Pca9555 *pca, uint8_t reg, uint16_t data);
  * \return true if device is found, false otherwise.
  */
 bool pca9555_init_3(I2c *i2c, Pca9555 *pca, pca9555_addr addr);
+
+#if CONFIG_PCA9555_TESTING
+void pca9555_testing(I2c *i2c_bus, Pca9555 *pe);
+#else
+# define pca9555_testing(i2c_bus, pe)
+#endif
+
 
 #endif /* DRV_PCA9555_H */

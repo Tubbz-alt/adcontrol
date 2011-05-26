@@ -39,6 +39,13 @@
 #define CFG_PCA9555_H
 
 /**
+ * Check this to enable PCA9555 testing port
+ *
+ * $WIZ$ type = "boolean"
+ */
+#define CONFIG_PCA9555_TESTING   0
+
+/**
  * Module logging level.
  *
  * $WIZ$ type = "enum"

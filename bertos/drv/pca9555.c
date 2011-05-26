@@ -41,7 +41,6 @@
 
 #include "pca9555.h"
 
-#include "cfg/cfg_pca9555.h"
 #include "hw/hw_pca9555.h"
 
 #define LOG_LEVEL  PCA9555_LOG_LEVEL
@@ -51,6 +50,7 @@
 #include <cfg/module.h>
 
 #include <drv/i2c.h>
+#include <drv/timer.h>
 
 /**
  * Read PCA9555 \a specified register.
@@ -103,4 +103,20 @@ bool pca9555_init_3(I2c *i2c, Pca9555 *pca, pca9555_addr addr)
 
 	return pca9555_get(i2c, pca, PCA9555_REG_DIRECTION, &regs);
 }
+
+#if CONFIG_PCA9555_TESTING
+# warning PCA9555 TESTING ENABLED
+void NORETURN pca9555_testing(I2c *i2c_bus, Pca9555 *pe) {
+	uint16_t in = 0xBEEF;
+
+	kprintf("PCA9555 Test\r\n");
+
+	while(1) {
+		timer_delay(1000);
+		pca9555_in(i2c_bus, pe, &in);
+		kprintf("IN 0x%04X\r\n", in);
+	}
+
+}
+#endif
 
