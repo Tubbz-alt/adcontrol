@@ -24,34 +24,36 @@
 #include "console.h"
 #include "command.h"
 #include "eeprom.h"
+#include "signals.h"
 #include "gsm.h"
+
+#include "hw/hw_led.h"
 
 #include <cfg/compiler.h>
 #include <cfg/macros.h>
 
 #include <drv/timer.h>
 #include <drv/meter_ade7753.h>
+#include <drv/pca9555.h>
 #include <mware/event.h>
 
 #include <struct/list.h>
 
+#include <avr/wdt.h>
+
 #include <stdio.h> // sprintf
 
 /* Define logging settings (for cfg/log.h module). */
-#define LOG_LEVEL   LOG_LVL_INFO
-#define LOG_FORMAT  LOG_FMT_TERSE
+#define LOG_LEVEL   CONTROL_LOG_LEVEL
+#define LOG_FORMAT  CONTROL_LOG_FORMAT
 #include <cfg/log.h>
 
-#define DB(x) x
 //#define DB(x)
-#define SMS_(x) x
-//#define SMS_(x)
-
-// The time interval [s] for received SMS handling
-#define SMS_CHECK_SEC	30
-
-// The time interval [s] for console handling
-#define CMD_CHECK_SEC	 1
+#define DB(x) x
+#define DB2(x)
+//#define DB2(x) x
+#define GSM(x) x
+//#define GSM(x)
 
 static void sms_task(iptr_t timer);
 static void cmd_task(iptr_t timer);
@@ -65,6 +67,10 @@ List timers_lst;
 
 // The serial port used for console commands
 extern Serial dbg_port;
+// The I2C bus used to access the port expander
+extern I2c i2c_bus;
+// The PCA9995 port expander
+extern Pca9555 pe;
 
 //=====[ SMS handling ]=========================================================
 // The timer to schedule SMS handling task
@@ -73,21 +79,42 @@ Timer sms_tmr;
 Event sms_evt;
 // The SMS message
 gsmSMSMessage_t msg;
+
+// Update the CSQ signal level indicator
+static void updateCSQ(void) {
+	uint8_t csq;
+
+	gsmUpdateCSQ();
+	csq = gsmCSQ();
+	DB(LOG_INFO("GSM CSQ [%hu]\r\n", csq));
+	if (csq==99 || csq<3) {
+		csq = 0;
+	} else {
+		if (csq>2) csq = 1;
+		if (csq>8) csq = 2;
+		if (csq>16) csq = 3;
+	}
+	LED_GSM_CSQ(csq);
+}
+
 // The task to process SMS events
 static void sms_task(iptr_t timer) {
 	//Silence "args not used" warning.
 	(void)timer;
 	int8_t smsIndex = 0;
 
-	kprintf("Check SMS\n");
+	DB(LOG_INFO("Checking for SMS...\r\n"));
 
 	// Retrive the first SMS into memory
-	SMS_(smsIndex = gsmSMSByIndex(&msg, 1));
+	GSM(smsIndex = gsmSMSByIndex(&msg, 1));
 	if (smsIndex==1) {
 		command_parse(&dbg_port.fd, msg.text);
 		timer_delay(500);
-		SMS_(gsmSMSDel(1));
+		GSM(gsmSMSDel(1));
 	}
+
+	// Update signal level
+	GSM(updateCSQ());
 
 	// Reschedule this timer
 	synctimer_add(&sms_tmr, &timers_lst);
@@ -115,17 +142,71 @@ static void cmd_task(iptr_t timer) {
 }
 
 
+//=====[ Button handling ]=====================================================
+
+// The timer to schedule Button handling task
+Timer btn_tmr;
+
+static void reset_board(void) {
+	// Shutdons all LEDs to notify reset
+	LED_NOTIFY_OFF();
+	LOG_INFO("Forced reset...\r\n");
+	wdt_enable(WDTO_2S);
+	while(1);
+}
+
+// The task to process Console events
+static void btn_task(iptr_t timer) {
+	ticks_t start = timer_clock();
+	ticks_t elapsed;
+	(void)timer;
+
+	DB2(LOG_INFO("Button timer...\r\n"));
+
+	// LightUp all LEDS to notify calibration/reset pending
+	LED_NOTIFY_ON();
+
+	// Wait for button release or reset timeout
+	while (!signal_status(SIGNAL_PLAT_BUTTON)) {
+		elapsed = timer_clock() - start;
+		if ( ms_to_ticks(BTN_RESET_SEC*1000) <= elapsed ) {
+			// Button pressed fot t > BTN_CHECK_SEC+BTN_RESET_SEC
+			reset_board();
+		}
+		timer_delay(100);
+	}
+
+	// Button pressed BTN_CHECK_SEC < t < BTN_CHECK_SEC+BTN_RESET_SEC
+	LED_NOTIFY_OFF();
+	controlCalibration();
+
+}
+
 //=====[ Channels Data ]========================================================
 
-#define CALIBRATION_SAMPLES 32
-
-#define chEnabled(CH) (chMask & BV16(CH))
-#define chUncalibrated(CH) (chCalib & BV16(CH))
-#define chMarkUncalibrated(CH) (chCalib |= BV16(CH))
-#define chMarkCalibrated(CH) (chCalib &= ~BV16(CH))
-#define chGetMoreSamples(CH) (chData[CH].calSamples)
-#define chMarkSample(CH) (chData[CH].calSamples--)
-#define chSetSample(CH, PWR) (chData[CH].Icur = PWR)
+#define chEnabled(CH)         (chMask & BV16(CH))
+#define chUncalibrated(CH)    (chCalib & BV16(CH))
+#define chMarkUncalibrated(CH)(chCalib |= BV16(CH))
+#define chMarkCalibrated(CH)  (chCalib &= ~BV16(CH))
+#define CalibrationDone()     (!(chCalib & chMask))
+#define chGetMoreSamples(CH)  (chData[CH].calSamples)
+#define chMrkSample(CH)       (chData[CH].calSamples--)
+#define chRstSample(CH)       (chData[CH].calSamples = CONFIG_CALIBRATION_SAMPLES);
+#define chSetIrms(CH, IRMS)   (chData[CH].Irms = IRMS)
+#define chSetImax(CH, IMAX)   (chData[CH].Imax = IMAX)
+#define chSetVrms(CH, VRMS)   (chData[CH].Vrms = VRMS)
+#define chGetIrms(CH)          chData[CH].Irms
+#define chGetVrms(CH)          chData[CH].Vrms
+#define chGetImax(CH)          chData[CH].Imax
+#define chSetPwr(CH, PWR)     (chData[CH].Pwr = PWR)
+#define chGetPwr(CH)           chData[CH].Pwr
+#define chSetAE(CH, AE)       (chData[CH].ae = AE)
+#define chIncFaults(CH)        chData[CH].fltSamples++
+#define chGetFaults(CH)        chData[CH].fltSamples
+#define chRstFaults(CH)        chData[CH].fltSamples=0
+#define chFaulted(CH)         (chData[CH].fltSamples)
+#define chMarkFault(CH)       (fltMask |= BV16(CH))
+#define chMarkGood(CH)        (fltMask &= ~BV16(CH))
 
 /** @brief The RFN running modes */
 typedef enum running_modes {
@@ -135,19 +216,23 @@ typedef enum running_modes {
 } running_modes_t;
 
 typedef struct chData {
+	uint32_t Irms;
+	uint32_t Vrms;
 	uint32_t Imax;
-	uint32_t Icur;
+	double Pwr;
+	int32_t ae;
 	uint8_t calSamples;
+	uint8_t fltSamples;
 } chData_t;
 
 /** The mask of channels to be monitored */
 //static uint16_t chMask = 0xFFFF;
 static uint16_t chMask = 0xFFFF;
-#define ee_getChMask(V) ((uint16_t)0x0001)
-#warning MASKING ee_getChMask to return only ONE CHANNEL
+#define ee_getChMask(V) ((uint16_t)0x3000)
+#warning MASKING ee_getChMask FORCING ENABLED CHANNELS (0x3000)
 
-/** The currently selected channel */
-static uint8_t curCh = 15;
+/** The mask of channels with fault samples */
+static uint16_t fltMask = 0x0000;
 
 /** @brief The current running mode */
 static running_modes_t rmode = CALIBRATION;
@@ -156,66 +241,177 @@ static running_modes_t rmode = CALIBRATION;
 static uint16_t chCalib = 0xFFFF;
 
 /** The vector of channels data */
-static chData_t chData[16];
+static chData_t chData[MAX_CHANNELS];
 
 /** The minimum load loss to notify a FAULT */
-const uint32_t loadFault = 6000l;
+const uint32_t loadFault = ADE_IRMS_LOAD_FAULT;
+
+/** The minimum load variation for calibration  */
+const uint32_t minLoadVariation = (
+		ADE_IRMS_LOAD_FAULT>>ADE_LOAD_CALIBRATION_FACTOR);
+
 
 /** The buffer defined by the GSM module */
 extern char cmdBuff[161];
 
 //=====[ Channel Selection ]====================================================
 
+uint8_t chSelectionMap[] = {
+	0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
+	0x00, 0x0F, 0x0E, 0x0D, 0x0C, 0x0B, 0x0A, 0x09
+};
+
 /** @brief Get the bitmaks of powered-on channels */ 
 static inline uint16_t getActiveChannels(void) {
-	uint16_t acm = 0xFFFF; // Active Channels Maks
+	static uint16_t acm = 0x0000; // Active Channels Maks
+
 	// TODO put here the code to get powered on channels
 	// NOTE: this code is on the critical path, maybe we should exploit the
 	// I2C interrupt to handle updates just once required...
+	if (signal_pending(SIGNAL_PLAT_I2C)) {
+		pca9555_in(&i2c_bus, &pe, &acm);
+		acm = ~acm;
+		DB2(LOG_INFO("Active Channels: 0x%04X\r\n", acm));
+	}
+
 	return acm;
 }
 
 static inline void switchAnalogMux(uint8_t ch) {
-	// TODO select the required channel
-	//Silence "args not used" warning.
-	(void)ch;
+	// Set an invalid channel to force actual initialization at first call
+	static uint8_t prevAmuxCh = 0xFF;
+	uint8_t chSel;
+
+	// Avoid unnecessary switch if channel has not changed
+	if (ch == prevAmuxCh)
+		return;
+
+	prevAmuxCh = ch;
+	chSel  = (0xF0 & PORTA);
+	chSel |= chSelectionMap[ch];
+	PORTA  = chSel;
+
+	DB2(LOG_INFO("Switch Ch: %d => 0x%02X\r\n",
+				ch, chSelectionMap[ch]));
+
+}
+
+#if 0
+static inline void resetMeter(void) {
+	LOG_INFO("Reset ADE7753\r\n");
+	// Reset the meter
+	meter_ade7753_reset();
+	timer_delay(20);
+	// Set LCAE
+	meter_ade7753_setLCEA(500);
+
 }
 
 static inline void readMeter(uint8_t ch) {
-	static uint8_t prevCh = 0;
-	uint32_t pwr;
+	static uint8_t prevCh = 17;
+	int32_t ae;
 
 	if (ch != prevCh) {
-		// TODO Reset the meter
-		// TODO wait for a valid measure
-		timer_delay(250);
+		resetMeter();
+		prevCh = ch;
 	}
 
-	prevCh = ch;
+	// Get Energy accumulation value
+	ae = meter_ade7753_getEnergyLCAE();
+	chSetAE(ch, ae);
 
-	// TODO get Power value
-	pwr = meter_ade7753_Irms();
-	chSetSample(ch, pwr);
-
-	DB(kprintf("CH[%hd]: %08ld\r\n", ch, chData[ch].Icur));
+	DB(kprintf("CH[%hd]: %08ld\r\n", ch, chData[ch].ae));
 
 }
+#else
+static inline void resetMeter(void) {
 
+	// Reset the meter
+	meter_ade7753_reset();
+
+	// Wait for a line cycle start
+	signal_wait(SIGNAL_ADE_ZX);
+
+	LED_OFF();
+	// Wait for a valid measure
+	timer_delay(ADE_LINE_CYCLES_PERIOD
+			*ADE_LINE_CYCLES_SAMPLE_COUNT);
+	LED_ON();
+}
+
+static inline void readMeter(uint8_t ch) {
+	static uint8_t prevAdeCh = 0xFF;
+
+	if (ch != prevAdeCh) {
+		prevAdeCh = ch;
+		resetMeter();
+	}
+
+	// TODO get Power value
+	chSetIrms(ch, meter_ade7753_Irms());
+	chSetVrms(ch, meter_ade7753_Vrms());
+
+#if ADE_IRMS_OFFSET
+	// Fix Offset on Irms
+	if (chGetIrms(ch)<ADE_IRMS_OFFSET)
+		chSetIrms(ch) = 0;
+	else
+		chSetIrms(ch) = chGetIrms(ch)-ADE_IRMS_OFFSET;
+#endif
+
+#if CONFIG_CONTROL_TESTING
+	kprintf("%02hd:%08ld:%08ld\r\n", ch+1, chGetIrms(ch), chGetVrms(ch));
+	return;
+#endif
+
+	// Power convertion
+	chSetPwr(ch, (((double)chGetIrms(ch)*chGetVrms(ch))/100000));
+
+
+#if CONFIG_CONTROL_DEBUG
+	DB(LOG_INFO("CH[%hd] %c%c: Irms %08ld, Vrms %08ld => Pwr %4.0fW (%08.3f)\r\n",
+				ch+1, chUncalibrated(ch) ? 'C' : 'M',
+				chFaulted(ch) ? 'F' : 'S',
+				chGetIrms(ch), chGetVrms(ch),
+				chGetPwr(ch)/ADE_PWR_RATIO,
+				chGetPwr(ch)));
+#else
+	DB(LOG_INFO("CH[%hd] %c: %4.0f [W]\r\n",
+				ch+1, chUncalibrated(ch) ? 'C' : 'M',
+				chGetPwr(ch)/ADE_PWR_RATIO));
+#endif
+
+}
+#endif
+
+static uint8_t curCh = MAX_CHANNELS-1;
 /** @brief Get a Power measure and return the measured channel */
 static uint8_t sampleChannel(void) {
 	uint16_t activeChs;
 
 	// Get powered on (and enabled) channels
 	activeChs = (getActiveChannels() & chMask);
+	if (!activeChs)
+		return MAX_CHANNELS;
+
+	// If some _active_ channels are in calibration mode: focus just on them only
+	// This allows to reduce calibration time perhaps also avoiding channel
+	// switching
+	if (!CalibrationDone() &&
+			(activeChs & chCalib)) {
+		LOG_INFO("Uncalibrated CHs [0x%02X]\r\n", chCalib);
+		activeChs &= chCalib;
+	}
 
 	// Select next active channel (max one single scan)
-	for (uint8_t i = 0; i<16; i++) {
+	// TODO optimize selection considering the board schematic
+	for (uint8_t i = 0; i<MAX_CHANNELS; i++) {
 		curCh++;
 		if (curCh>15)
 			curCh=0;
 		if (BV16(curCh) & activeChs)
 			break;
-	};
+	}
 
 	// Switch the analog MUX
 	switchAnalogMux(curCh);
@@ -247,6 +443,19 @@ static inline uint8_t needCalibration(uint8_t ch) {
 	return 0;
 }
 
+static inline void chRecalibrate(uint8_t ch) {
+	// Avoid loading of (disabled) channels
+	if (!chEnabled(ch))
+		return;
+	// Set required calibration points
+	chSetImax(ch, 0);
+	chSetIrms(ch, 0);
+	chRstFaults(ch);
+	chRstSample(ch);
+	chMarkUncalibrated(ch);
+	chMarkGood(ch);
+}
+
 /** @brief Setup the (initial) calibration data for the specified channel */
 static void loadCalibrationData(uint8_t ch) {
 	// TODO we could save calibration data to EEPROM and recover them at each
@@ -256,24 +465,10 @@ static void loadCalibrationData(uint8_t ch) {
 	if (!chEnabled(ch))
 		return;
 
-	LOG_INFO("Loading calibration data CH[%hd]\r\n", ch);
-
-	chData[ch].Imax = 0;
-	chData[ch].Icur = 0;
-	chData[ch].calSamples = CALIBRATION_SAMPLES;
+	LOG_INFO("Loading calibration data CH[%hd]\r\n", ch+1);
+	chRecalibrate(ch);
 }
 
-static inline void chRecalibrate(uint8_t ch) {
-	// Avoid loading of (disabled) channels
-	if (!chEnabled(ch))
-		return;
-	// Set required calibration points
-	chData[ch].Imax = 0;
-	chData[ch].Icur = 0;
-	chData[ch].calSamples = CALIBRATION_SAMPLES;
-	// Mark channel for calibration
-	chMarkUncalibrated(ch);
-}
 
 void controlCalibration(void) {
 
@@ -283,54 +478,126 @@ void controlCalibration(void) {
 	}
 }
 
+#if 0
+# warning USING INCREASING ONLY CALIBRATION
 /** @brief Defines the calibration policy for each channel */
 static void calibrate(uint8_t ch) {
 
 	if (!chGetMoreSamples(ch) &&
 			chUncalibrated(ch)) {
 		// Mark channel as calibrated
-		kprintf("CH[%hd]: calibration DONE (%08ld)\r\n",
-				ch, chData[ch].Imax);
+		kprintf("CH[%hd]: calibration DONE %4.0f [W] (%08ld)\r\n",
+				ch+1, chData[ch].Pwr/8500, chData[ch].Imax);
 		chMarkCalibrated(ch);
 		return;
 	}
+	
+	kprintf("CH[%hd]: (max,cur)=(%08ld,%08ld)...\r\n",
+			ch+1, chGetImax(ch), chGetIrms(ch));
 
-	chMarkSample(ch);
+	// Decrease calibration samples required
+	chMrkSample(ch);
 
-	if (chData[ch].Imax > chData[ch].Icur) {
+	if (chGetImax(ch) >= chGetIrms(ch)) {
 		// TODO better verify to avoid being masked by a load peak
 		return;
 	}
 
 	//----- Load increased... update current Imax -----
-	kprintf("CH[%hd]: calibrating...\r\n", ch);
-	chData[ch].calSamples = CALIBRATION_SAMPLES;
+	kprintf("CH[%hd]: calibrating...\r\n", ch+1);
+	chData[ch].calSamples = CONFIG_CALIBRATION_SAMPLES;
 
 	// Avoid recording load peak
-	if ((chData[ch].Icur-chData[ch].Imax) > loadFault) {
+	if ((chGetIrms(ch)-chGetImax(ch)) > loadFault) {
 		chData[ch].Imax += (loadFault>>2);
 		return;
 	}
 
-	chData[ch].Imax = chData[ch].Icur;
+	chData[ch].Imax = chGetIrms(ch);
 }
+#else
+# warning USING BI-SEARCH CALIBRATION
+/** @brief Defines the calibration policy for each channel */
+static void calibrate(uint8_t ch) {
+	uint32_t var;
+
+	if (!chGetMoreSamples(ch) &&
+			chUncalibrated(ch)) {
+		// Mark channel as calibrated
+		kprintf("CH[%hd]: calibration DONE %4.0f [W] (%08ld)\r\n",
+				ch+1, chData[ch].Pwr/8500, chData[ch].Imax);
+		chMarkCalibrated(ch);
+		return;
+	}
+	
+	kprintf("CH[%hd]: (max,cur)=(%08ld,%08ld)...\r\n",
+			ch+1, chGetImax(ch), chGetIrms(ch));
+
+	// Decrease calibration samples required
+	chMrkSample(ch);
+
+	// Update current measure (by half of the variation)
+	if (chGetImax(ch) >= chGetIrms(ch)) {
+		var = chGetImax(ch)-chGetIrms(ch);
+		chData[ch].Imax -= var>>1;
+	} else {
+		var = chGetIrms(ch)-chGetImax(ch);
+		chData[ch].Imax += var>>1;
+	}
+
+	// Mark calibration if measure is too noise
+	if (var > minLoadVariation) {
+		kprintf("CH[%hd]: calibrating...\r\n", ch+1);
+		chData[ch].calSamples = CONFIG_CALIBRATION_SAMPLES;
+	}
+
+
+}
+#endif
 
 //=====[ Channel Monitoring ]===================================================
 
+#if 0
+#warning USING SINGLE-CHECK LOAD LOSS
 static inline uint8_t chLoadLoss(uint8_t ch) {
 	uint32_t loadLoss;
 
-	// TODO we should consider increasing values, maybe to adapt the
-	// calibration
-	if (chData[ch].Icur >= chData[ch].Imax)
+	if (chData[ch].Irms >= chData[ch].Imax)
 		return 0;
 
-	loadLoss = chData[ch].Imax-chData[ch].Icur;
+	loadLoss = chData[ch].Imax-chData[ch].Irms;
 	if ( loadLoss > loadFault)
 		return 1;
 
 	return 0;
 }
+#else
+#warning USING MULTI-CHECK LOAD LOSS
+static inline uint8_t chLoadLoss(uint8_t ch) {
+	uint32_t loadLoss;
+
+	// TODO we should consider increasing values, maybe to adapt the
+	// calibration
+	if (chGetIrms(ch) >= chGetImax(ch)) {
+		chRstFaults(ch);
+		return 0;
+	}
+
+	// Computing LOAD loss
+	loadLoss = chGetImax(ch)-chGetIrms(ch);
+	if (loadLoss < loadFault) {
+		chRstFaults(ch);
+		return 0;
+	}
+
+	chIncFaults(ch);
+	if (chGetFaults(ch)>CONFIG_FAULT_SAMPLES) {
+		return 1;
+	}
+	
+	return 0;
+}
+#endif
 
 static void notifyLoss(uint8_t ch) {
 	char dst[MAX_SMS_NUM];
@@ -340,7 +607,7 @@ static void notifyLoss(uint8_t ch) {
 
 	// Format SMS message
 	len = ee_getSmsText(msg, MAX_MSG_TEXT);
-	sprintf(msg+len, " - Perdita carico CH[%hd]\r\n", ch);
+	sprintf(msg+len, " - Perdita carico CH[%hd]\r\n", ch+1);
 	LOG_INFO("SMS: %s", msg);
 
 	for (idx=0; idx<MAX_SMS_DEST; idx++) {
@@ -351,7 +618,7 @@ static void notifyLoss(uint8_t ch) {
 			continue;
 
 		LOG_INFO("Notifing [%s]...\r\n", dst);
-		SMS_(gsmSMSSend(dst, msg));
+		GSM(gsmSMSSend(dst, msg));
 	}
 
 	// Wait for SMS being delivered
@@ -367,7 +634,7 @@ static void monitor(uint8_t ch) {
 	// Fault detected
 	rmode = FAULT;
 	kprintf("WARN: Load loss on CH[%hd] (%08ld => %08ld)\r\n",
-		ch, chData[ch].Imax, chData[ch].Icur);
+		ch+1, chData[ch].Imax, chData[ch].Irms);
 
 	// Mark channel for recalibration
 	chRecalibrate(ch);
@@ -377,6 +644,114 @@ static void monitor(uint8_t ch) {
 
 }
 
+static void notifyFault(void) {
+	char dst[MAX_SMS_NUM];
+	char *msg = cmdBuff;
+	uint8_t idx;
+	uint8_t len;
+
+	// Format SMS message
+	len = ee_getSmsText(msg, MAX_MSG_TEXT);
+	sprintf(msg+len, " - Errore centralina\r\n");
+	LOG_INFO("SMS: %s", msg);
+
+	for (idx=0; idx<MAX_SMS_DEST; idx++) {
+		ee_getSmsDest(idx, dst, MAX_SMS_NUM);
+
+		// Jump disabled destination numbers
+		if (dst[0] != '+')
+			continue;
+
+		LOG_INFO("Notifing [%s]...\r\n", dst);
+		GSM(gsmSMSSend(dst, msg));
+	}
+
+	// Wait for SMS being delivered
+	timer_delay(10000);
+}
+
+static void buttonHandler(void) {
+
+	// Button pressed
+	if (!signal_status(SIGNAL_PLAT_BUTTON)) {
+		// Schedule timer task
+		synctimer_add(&btn_tmr, &timers_lst);
+		return;
+	}
+
+	// Button released
+	synctimer_abort(&btn_tmr);
+
+}
+
+static void checkSignals(void) {
+	// Check for UNIT IRQ
+	if (signal_pending(SIGNAL_UNIT_IRQ)) {
+		ERR_ON();
+		notifyFault();
+	}
+	// Checking for BUTTON
+	if (signal_pending(SIGNAL_PLAT_BUTTON)) {
+		LOG_INFO("USR BUTTON [%d]\r\n", signal_status(SIGNAL_PLAT_BUTTON));
+		buttonHandler();
+	}
+}
+
+static void notifyCalibrationCompleted(void) {
+	char dst[MAX_SMS_NUM];
+	char *msg = cmdBuff;
+	uint8_t idx;
+	uint8_t len;
+
+	// Format SMS message
+	len = ee_getSmsText(msg, MAX_MSG_TEXT);
+	sprintf(msg+len, " - Calibrazione completata\r\n");
+	LOG_INFO("SMS: %s", msg);
+
+	for (idx=0; idx<MAX_SMS_DEST; idx++) {
+		ee_getSmsDest(idx, dst, MAX_SMS_NUM);
+
+		// Jump disabled destination numbers
+		if (dst[0] != '+')
+			continue;
+
+		LOG_INFO("Notifing [%s]...\r\n", dst);
+		GSM(gsmSMSSend(dst, msg));
+	}
+
+	// Wait for SMS being delivered
+	timer_delay(10000);
+}
+
+#if CONFIG_CONTROL_TESTING 
+# warning CONTROL TESTING ENABLED
+void NORETURN chsTesting(void) {
+
+	LOG_INFO(".:: CHs Testing\r\n");
+
+	// Enabling all channels
+	chMask = 0xFFFF;
+	// Starting from CH[0]
+	curCh = 0;
+
+	while(1) {
+
+		// Read power from ADE7753 meter
+		readMeter(curCh);
+
+		// Switch channel on Button push
+		if (signal_pending(SIGNAL_PLAT_BUTTON) &&
+				signal_status(SIGNAL_PLAT_BUTTON)) {
+			curCh++;
+			if (curCh>15)
+				curCh=0;
+			switchAnalogMux(curCh);
+		}
+	}
+
+}
+#endif
+
 //=====[ Control Loop ]=========================================================
 void controlSetup(void) {
 
@@ -384,7 +759,7 @@ void controlSetup(void) {
 	LIST_INIT(&timers_lst);
 
 	// Schedule SMS handling task
-	SMS_(gsmSMSDelRead());
+	GSM(gsmSMSDelRead());
 	timer_setDelay(&sms_tmr, ms_to_ticks(SMS_CHECK_SEC*1000));
 	timer_setSoftint(&sms_tmr, sms_task, (iptr_t)&sms_tmr);
 	synctimer_add(&sms_tmr, &timers_lst);
@@ -394,6 +769,10 @@ void controlSetup(void) {
 	timer_setSoftint(&cmd_tmr, cmd_task, (iptr_t)&cmd_tmr);
 	synctimer_add(&cmd_tmr, &timers_lst);
 
+	// Setup Button handling task
+	timer_setDelay(&btn_tmr, ms_to_ticks(BTN_CHECK_SEC*1000));
+	timer_setSoftint(&btn_tmr, btn_task, (iptr_t)&btn_tmr);
+
 	// Setup console RX timeout
 	console_init(&dbg_port.fd);
 	ser_settimeouts(&dbg_port, 0, 1000);
@@ -401,31 +780,62 @@ void controlSetup(void) {
 	// Dump EEPROM configuration
 	ee_dumpConf();
 
+	// Dump ADE7753 configuration
+	meter_ade7753_dumpConf();
+
 	// Get bitmask of enabled channels
 	chMask = ee_getChMask();
+
+	// Enabling calibration only for enabled channels
+	chCalib = chMask;
 
 	// Setup channels calibration data
 	for (uint8_t ch=0; ch<16; ch++)
 		loadCalibrationData(ch);
 
+	// Update signal level
+	GSM(updateCSQ());
+
 }
 
+static char progress[] = "/|\\-";
+
 void controlLoop(void) {
+	static uint8_t i = 0;
 	uint8_t ch; // The currently selected channel
-
-	DB(timer_delay(100));
-
-	// Select Channel to sample and get P measure
-	ch = sampleChannel();
-
-	if (needCalibration(ch)) {
-		calibrate(ch);
-	} else {
-		monitor(ch);
-	}
 
 	// Schedule timer activities (SMS and Console checking)
 	synctimer_poll(&timers_lst);
+
+	// Checking for pending signals to serve
+	checkSignals();
+
+	// Select Channel to sample and get P measure
+	ch = sampleChannel();
+	if (ch==MAX_CHANNELS) {
+		// No channels enabled... avoid calibration/monitoring
+		DB(LOG_INFO("No active CHs (UnCal: 0x%02X) %c\r",
+					chCalib, progress[i++%4]));
+		timer_delay(500);
+		return;
+	}
+
+	if (needCalibration(ch)) {
+		calibrate(ch);
+		
+		// Check if all channels has been calibrated
+		// So that we can notify calibration completion (just one time)
+		if (!CalibrationDone())
+			return;
+
+		// Notify calibration completion
+		LOG_INFO("CALIBRATION COMPLETED\r\n");
+		notifyCalibrationCompleted();
+		return;
+	}
+
+	// Monitor the current channel
+	monitor(ch);
 
 }
 

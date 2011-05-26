@@ -24,11 +24,56 @@
 
 #include "console.h"
 
+#include "cfg/cfg_control.h"
+
 #include <io/kfile.h>
+
+// The time interval [s] for received SMS handling
+#define SMS_CHECK_SEC	30
+
+// The time interval [s] for console handling
+#define CMD_CHECK_SEC	 1
+
+// The time interval [s] for button handling
+#define BTN_CHECK_SEC	 3
+
+// The time interval [s] for reset button handling
+#define BTN_RESET_SEC	 5
+
+// Line cycle period [ms]
+// Power line @50Hz => 1 cycles = 20ms
+#define ADE_LINE_CYCLES_PERIOD 20
+
+// The number of line cycles to wait before getting a sample
+#define ADE_LINE_CYCLES_SAMPLE_COUNT 16
+
+// The Irms offset
+#define ADE_IRMS_OFFSET 0
+
+// The Power constant [1W]
+// - (max) power sample
+// - multimeter readed Power
+#define ADE_PWR_RATIO (24000/6)
+
+// The LOAD FAULT level
+#define ADE_IRMS_LOAD_FAULT 3000l
+
+// The Load FAULT sensitivity factor (power of 2)
+#define ADE_LOAD_CALIBRATION_FACTOR 1
+
+
+// The maximum number of channels
+#define MAX_CHANNELS 16
 
 void controlCalibration(void);
 void controlSetup(void);
 void controlLoop(void);
+
+#if CONFIG_CONTROL_TESTING 
+void NORETURN chsTesting(void);
+#else
+#define chsTesting()
+#endif
 
 #endif // DRK_CONTROL_H_
 
