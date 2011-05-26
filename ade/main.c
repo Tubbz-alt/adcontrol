@@ -2,6 +2,7 @@
 #include "console.h"
 #include "eeprom.h"
 #include "control.h"
+#include "signals.h"
 
 #include "gsm.h"
 
@@ -30,10 +31,18 @@ Pca9555 pe;
 
 static void init(void) {
 
+	// Setting LEDs pins (PB1, PA4..7)
 	LED_INIT();
+
+	// Setting AMUX pins  (PA0..3)
+	DDRA  |= 0x0F;
+	PORTA &= 0xF0;
+	// Select AMUX CH[1] => 8
+	PORTA |= 0x08;
 
 	kdbg_init();
 	timer_init();
+	signals_init();
 
 	MCUSR = 0;
 	wdt_disable();
@@ -49,6 +58,18 @@ int main(void) {
 
 	kprintf("RFN (c) 2011 RCT\r\nBuildNr %d\r\n", vers_build_nr);
 
+	// Testing LEDs
+	for (uint8_t i = 5; i; --i) {
+		LED_GSM_CSQ(0);
+		timer_delay(100);
+		LED_GSM_CSQ(1);
+		timer_delay(100);
+		LED_GSM_CSQ(2);
+		timer_delay(100);
+		LED_GSM_CSQ(3);
+		timer_delay(100);
+	}
+
 	/* Open the Console port */
 	ser_init(&dbg_port, SER_UART0);
 	ser_setbaudrate(&dbg_port, 115200);
@@ -60,34 +81,34 @@ int main(void) {
 	/* Open the GSM port */
 	ser_init(&gsm_port, SER_UART1);
 	ser_setbaudrate(&gsm_port, 115200);
+	LED_GSM_CSQ(0);
 
 	/* Initialize ADE7753 SPI port and data structure */
 	spimaster_init(&spi_port, SER_SPI);
 	ser_setbaudrate(&spi_port, 500000L);
 	meter_ade7753_init((KFile *)&spi_port);
 
+	/* Testing SIGNALS (if enabled by configuration) */
+	sigTesting();
+	/* Testing GSM (if enabled by configuration) */
+	gsmTesting(&gsm_port);
+	/* Testing PCA9555 (if enabled by configuration) */
+	pca9555_testing(&i2c_bus, &pe);
+	/* Testing CHANNELS (if enabled by configuration) */
+	chsTesting();
+
+#if 1
 	/* Power-on Modem */
 	gsmInit(&gsm_port);
 	gsmPowerOn();
 	gsmSMSConf(0);
-	timer_delay(15000);
+#endif
 
 	/* Entering the main control loop */
 	controlSetup();
 	while(1) {
 		controlLoop();
 	}
-
-#if 0
-	ee_dumpConf(&dbg_port.fd);
-
-	gsmPortingTest(&gsm_port);
-
-	console_init(&dbg_port.fd);
-	while(1) {
-		console_run(&dbg_port.fd);
-	}
-#endif
 
 	return 0;
 }
