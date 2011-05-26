@@ -15,6 +15,7 @@ ade_USER_CSRC = \
 	$(ade_SRC_PATH)/gsm.c \
 	$(ade_SRC_PATH)/control.c \
 	$(ade_SRC_PATH)/main.c \
+	$(ade_SRC_PATH)/signals.c \
 	#
 
 # Files included by the user.
