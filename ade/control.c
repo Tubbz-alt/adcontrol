@@ -205,8 +205,8 @@ static void btn_task(iptr_t timer) {
 #define chGetFaults(CH)        chData[CH].fltSamples
 #define chRstFaults(CH)        chData[CH].fltSamples=0
 #define chFaulted(CH)         (chData[CH].fltSamples)
-#define chMarkFault(CH)       (fltMask |= BV16(CH))
-#define chMarkGood(CH)        (fltMask &= ~BV16(CH))
+#define chMarkFault(CH)       (chFaulty |= BV16(CH))
+#define chMarkGood(CH)        (chFaulty &= ~BV16(CH))
 
 /** @brief The RFN running modes */
 typedef enum running_modes {
@@ -232,7 +232,7 @@ static uint16_t chMask = 0xFFFF;
 #warning MASKING ee_getChMask FORCING ENABLED CHANNELS (0x3000)
 
 /** The mask of channels with fault samples */
-static uint16_t fltMask = 0x0000;
+static uint16_t chFaulty = 0x0000;
 
 /** @brief The current running mode */
 static running_modes_t rmode = CALIBRATION;
@@ -394,14 +394,35 @@ static uint8_t sampleChannel(void) {
 	if (!activeChs)
 		return MAX_CHANNELS;
 
+	// If some _active_ channels are in fault mode: focus just on them only
+	// This allows to reduce FAULTS DETECTION time perhaps also avoiding channel
+	// switching
+	if (chFaulty &&
+			(activeChs & chFaulty)) {
+		LOG_INFO("Faulty CHs [0x%02X]\r\n", chFaulty);
+		activeChs &= chFaulty;
+		// Remain on current channel if it is _active_ and _faulty_
+		if (activeChs & BV16(curCh))
+			goto sample;
+		// Switch to the next _active_ abd _faulty_ channel
+		goto select;
+	}
+
 	// If some _active_ channels are in calibration mode: focus just on them only
-	// This allows to reduce calibration time perhaps also avoiding channel
+	// This allows to reduce CALIBRATION time perhaps also avoiding channel
 	// switching
 	if (!CalibrationDone() &&
 			(activeChs & chCalib)) {
 		LOG_INFO("Uncalibrated CHs [0x%02X]\r\n", chCalib);
 		activeChs &= chCalib;
+		// Remain on current channel if it is _active_ and _uncalibrated_
+		if (activeChs & BV16(curCh))
+			goto sample;
+		// Switch to the next _active_ abd _uncalibrated_ channel
+		goto select;
 	}
+
+select:
 
 	// Select next active channel (max one single scan)
 	// TODO optimize selection considering the board schematic
@@ -415,6 +436,8 @@ static uint8_t sampleChannel(void) {
 
 	// Switch the analog MUX
 	switchAnalogMux(curCh);
+
+sample:
 
 	// Read power from ADE7753 meter
 	readMeter(curCh);
@@ -450,10 +473,10 @@ static inline void chRecalibrate(uint8_t ch) {
 	// Set required calibration points
 	chSetImax(ch, 0);
 	chSetIrms(ch, 0);
+	chMarkGood(ch);
 	chRstFaults(ch);
 	chRstSample(ch);
 	chMarkUncalibrated(ch);
-	chMarkGood(ch);
 }
 
 /** @brief Setup the (initial) calibration data for the specified channel */
@@ -577,8 +600,9 @@ static inline uint8_t chLoadLoss(uint8_t ch) {
 	uint32_t loadLoss;
 
 	// TODO we should consider increasing values, maybe to adapt the
-	// calibration
+	// calibration to drift values, or new loads
 	if (chGetIrms(ch) >= chGetImax(ch)) {
+		chMarkGood(ch);
 		chRstFaults(ch);
 		return 0;
 	}
@@ -586,10 +610,13 @@ static inline uint8_t chLoadLoss(uint8_t ch) {
 	// Computing LOAD loss
 	loadLoss = chGetImax(ch)-chGetIrms(ch);
 	if (loadLoss < loadFault) {
+		chMarkGood(ch);
 		chRstFaults(ch);
 		return 0;
 	}
 
+	// Faults detection
+	chMarkFault(ch);
 	chIncFaults(ch);
 	if (chGetFaults(ch)>CONFIG_FAULT_SAMPLES) {
 		return 1;
