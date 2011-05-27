@@ -103,7 +103,7 @@ static void sms_task(iptr_t timer) {
 	(void)timer;
 	int8_t smsIndex = 0;
 
-	DB(LOG_INFO("Checking for SMS...\r\n"));
+	DB(LOG_INFO("Checking for SMS commands...\r\n"));
 
 	// Retrive the first SMS into memory
 	GSM(smsIndex = gsmSMSByIndex(&msg, 1));
@@ -487,14 +487,14 @@ static void loadCalibrationData(uint8_t ch) {
 	if (!chEnabled(ch))
 		return;
 
-	LOG_INFO("Loading calibration data CH[%hd]\r\n", ch+1);
+	LOG_INFO("Loading calibration data CH[%02hd]\r\n", ch+1);
 	chRecalibrate(ch);
 }
 
 
 void controlCalibration(void) {
 
-	LOG_WARN("Forcing calibration\r\n");
+	LOG_WARN("Forcing re-calibration\r\n");
 	for (uint8_t ch=0; ch<16; ch++) {
 		chRecalibrate(ch);
 	}
@@ -720,7 +720,7 @@ static void checkSignals(void) {
 	}
 	// Checking for BUTTON
 	if (signal_pending(SIGNAL_PLAT_BUTTON)) {
-		LOG_INFO("USR BUTTON [%d]\r\n", signal_status(SIGNAL_PLAT_BUTTON));
+		DB2(LOG_INFO("USR BUTTON [%d]\r\n", signal_status(SIGNAL_PLAT_BUTTON)));
 		buttonHandler();
 	}
 }
@@ -848,7 +848,7 @@ void controlLoop(void) {
 	ch = sampleChannel();
 	if (ch==MAX_CHANNELS) {
 		// No channels enabled... avoid calibration/monitoring
-		DB(LOG_INFO("No active CHs (UnCal: 0x%02X) %c\r",
+		DB(LOG_INFO("Idle (UnCal: 0x%02X) %c\r",
 					chCalib, progress[i++%4]));
 		timer_delay(500);
 		return;
