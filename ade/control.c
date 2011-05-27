@@ -178,6 +178,7 @@ static void btn_task(iptr_t timer) {
 
 	// Button pressed BTN_CHECK_SEC < t < BTN_CHECK_SEC+BTN_RESET_SEC
 	LED_NOTIFY_OFF();
+	ERR_OFF();
 	controlCalibration();
 
 }
@@ -332,11 +333,9 @@ static inline void resetMeter(void) {
 	// Wait for a line cycle start
 	signal_wait(SIGNAL_ADE_ZX);
 
-	LED_OFF();
 	// Wait for a valid measure
 	timer_delay(ADE_LINE_CYCLES_PERIOD
 			*ADE_LINE_CYCLES_SAMPLE_COUNT);
-	LED_ON();
 }
 
 static inline void readMeter(uint8_t ch) {
@@ -658,6 +657,9 @@ static void monitor(uint8_t ch) {
 	if (!chLoadLoss(ch))
 		return;
 
+	// Light-up Fault LED (and switch the Relè)
+	ERR_ON();
+
 	// Fault detected
 	rmode = FAULT;
 	kprintf("WARN: Load loss on CH[%hd] (%08ld => %08ld)\r\n",
@@ -714,7 +716,6 @@ static void buttonHandler(void) {
 static void checkSignals(void) {
 	// Check for UNIT IRQ
 	if (signal_pending(SIGNAL_UNIT_IRQ)) {
-		ERR_ON();
 		notifyFault();
 	}
 	// Checking for BUTTON
@@ -831,6 +832,12 @@ void controlLoop(void) {
 	static uint8_t i = 0;
 	uint8_t ch; // The currently selected channel
 
+	// Set device status led
+	if (CalibrationDone())
+		LED_ON();
+	else
+		LED_SWITCH();
+
 	// Schedule timer activities (SMS and Console checking)
 	synctimer_poll(&timers_lst);
 
@@ -848,6 +855,7 @@ void controlLoop(void) {
 	}
 
 	if (needCalibration(ch)) {
+
 		calibrate(ch);
 		
 		// Check if all channels has been calibrated
@@ -857,6 +865,7 @@ void controlLoop(void) {
 
 		// Notify calibration completion
 		LOG_INFO("CALIBRATION COMPLETED\r\n");
+		LED_ON();
 		notifyCalibrationCompleted();
 		return;
 	}
