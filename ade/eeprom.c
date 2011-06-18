@@ -66,13 +66,13 @@ static int8_t ee_getString(const uint8_t *eep, char *str, uint8_t size) {
 
 int8_t ee_getSmsDest(uint8_t pos, char *num, uint8_t count) {
 	
-	if (pos >= MAX_SMS_DEST)
+	if (pos > MAX_SMS_DEST)
 		return -1;
 
 	if (count>MAX_SMS_NUM)
 		count=MAX_SMS_NUM;
 
-	return  ee_getString((const uint8_t*)eeconf.sms_dest[pos],
+	return  ee_getString((const uint8_t*)eeconf.sms_dest[pos-1],
 							num, count);
 
 }
@@ -80,10 +80,10 @@ int8_t ee_getSmsDest(uint8_t pos, char *num, uint8_t count) {
 
 int8_t ee_setSmsDest(uint8_t pos, const char *num) {
 
-	if (pos >= MAX_SMS_DEST)
+	if (pos > MAX_SMS_DEST)
 		return -1;
 
-	return ee_setString((uint8_t*)eeconf.sms_dest[pos],
+	return ee_setString((uint8_t*)eeconf.sms_dest[pos-1],
 							num, MAX_SMS_NUM);
 
 }
@@ -133,7 +133,7 @@ void ee_dumpConf(void) {
 	// Dump SMS destinations
 	for (i=0; i<MAX_SMS_DEST; i++) {
 		ee_getSmsDest(i, buff, MAX_SMS_NUM);
-		LOG_INFO(" SMS[%d]: %s\r\n", i, buff);
+		LOG_INFO(" SMS[%d]: %s\r\n", i+1, buff);
 		timer_delay(5);
 	}
 

@@ -100,7 +100,7 @@ MAKE_CMD(num, "", "s",
 	uint8_t len = 0;
 
 	sprintf(cmdBuff, "Destinatari SMS: ");
-	for (uint8_t i=0; i<MAX_SMS_DEST; i++) {
+	for (uint8_t i=1; i<=MAX_SMS_DEST; i++) {
 		ee_getSmsDest(i, buff, MAX_SMS_NUM);
 
 		len = strlen(cmdBuff);
