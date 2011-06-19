@@ -944,7 +944,8 @@ void controlLoop(void) {
 	}
 
 	// Monitor the current channel
-	monitor(ch);
+	if (controlMonitoringEnabled())
+		monitor(ch);
 
 }
 
