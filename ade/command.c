@@ -59,7 +59,7 @@ MAKE_CMD(help, "", "",
 }), 0)
 
 /* Reset */
-MAKE_CMD(reset, "", "",
+MAKE_CMD(rst, "", "",
 ({
 	//Silence "args not used" warning.
 	(void)args;
@@ -90,29 +90,21 @@ MAKE_CMD(test_sms, "t", "",
 	RC_OK;
 }), 0)
 
-({
-	//Silence "args not used" warning.
-	(void)args;
-	LOG_INFO("%s", args[0].s);
-
-	RC_OK;
-}), 0)
-
 /*******************************************************************************
  * Configuration Commands
  ******************************************************************************/
 
 //----- CMD: NUMBER ADD
-MAKE_CMD(add, "ds", "",
+MAKE_CMD(an, "ds", "",
 ({
-	LOG_INFO("<= Aggiungi numero %ld) %s)\r\n",
+	LOG_INFO("<= Aggiungi Numero %ld) %s)\r\n",
 		args[1].l, args[2].s);
 	ee_setSmsDest(args[1].l, args[2].s);
 	RC_OK;
 }), 0)
 
 //----- CMD: NUMBER DEL
-MAKE_CMD(del, "d", "",
+MAKE_CMD(cn, "d", "",
 ({
 	LOG_INFO("<= Rimuovi numero %ld)\r\n",
 		args[1].l);
@@ -122,7 +114,7 @@ MAKE_CMD(del, "d", "",
 ;
 
 //----- CMD: NUMBER SHOW
-MAKE_CMD(num, "", "s",
+MAKE_CMD(vn, "", "s",
 ({
 	char buff[MAX_SMS_NUM];
 	uint8_t len = 0;
@@ -145,9 +137,9 @@ MAKE_CMD(num, "", "s",
 ;
 
 //----- CMD: MESSAGE SET
-MAKE_CMD(msgw, "t", "",
+MAKE_CMD(ii, "t", "",
 ({
-	LOG_INFO("<= Imposta test SMS: %s\r\n",
+	LOG_INFO("<= Imposta Identificazione: %s\r\n",
 		args[1].s);
 	ee_setSmsText(args[1].s);
 	RC_OK;
@@ -155,24 +147,19 @@ MAKE_CMD(msgw, "t", "",
 ;
 
 //----- CMD: MESSAGE GET
-MAKE_CMD(msgr, "", "s",
+MAKE_CMD(li, "", "s",
 ({
 	char buff[MAX_MSG_TEXT];
 
 	ee_getSmsText(buff, MAX_MSG_TEXT);
-	sprintf(cmdBuff, "Testo SMS: %s ", buff);
+	sprintf(cmdBuff, "Identificazione: %s ", buff);
 	LOG_INFO("=> %s\r\n", cmdBuff);
 	args[1].s = cmdBuff;
 
 	RC_OK;
 }), 0)
 ;
-//----- CMD: RESET
-MAKE_CMD(rst, "", "",
 ({
-	//Silence "args not used" warning.
-	(void)args;
-	LOG_INFO("<= Reset\r\n");
 
 	RC_OK;
 }), 0)
@@ -183,29 +170,51 @@ MAKE_CMD(rst, "", "",
  ******************************************************************************/
 
 //----- CMD: MODE CALIBRATION
-MAKE_CMD(cal, "", "",
+MAKE_CMD(fc, "", "",
 ({
 	//Silence "args not used" warning.
 	(void)args;
-	LOG_INFO("<= Calibrazione\r\n");
+	LOG_INFO("<= Calibrazione forzata\r\n");
 	controlCalibration();
 	RC_OK;
 }), 0)
 ;
 
-//----- CMD: MODE MONITORING
-MAKE_CMD(go, "", "",
+//----- CMD: ENABLE MONITORING
+MAKE_CMD(am, "", "",
 ({
 	//Silence "args not used" warning.
 	(void)args;
-	LOG_INFO("<= Monitoraggio\r\n");
+	LOG_INFO("<= Monitoraggio abilitato\r\n");
+	controlEnableMonitoring();
+	RC_OK;
+}), 0)
+;
 
+//----- CMD: DISABLE MONITORING
+MAKE_CMD(dm, "", "s",
+({
+	//Silence "args not used" warning.
+	(void)args;
+	LOG_INFO("<= Monitoraggio disabilitato\r\n");
+	controlDisableMonitoring();
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: DISABLE MONITORING
+MAKE_CMD(fl, "", "",
+({
+	//Silence "args not used" warning.
+	(void)args;
+	LOG_INFO("<= Lampeggio Forzato\r\n");
+	controlSetSpoiled();
 	RC_OK;
 }), 0)
 ;
 
 //----- CMD: STATUS
-MAKE_CMD(sta, "", "s",
+MAKE_CMD(rs, "", "s",
 ({
 	sprintf(cmdBuff, "Stato: ");
 	LOG_INFO("=> %s\r\n", cmdBuff);
@@ -223,25 +232,25 @@ void command_init(void) {
 	REGISTER_CMD(ver);
 	REGISTER_CMD(sleep);
 	REGISTER_CMD(ping);
-	REGISTER_CMD(reset);
-
 	REGISTER_CMD(help);
 
 //----- Configuration commands
-	REGISTER_CMD(add);
-	REGISTER_CMD(del);
-	REGISTER_CMD(num);
-	REGISTER_CMD(msgw);
-	REGISTER_CMD(msgr);
+	REGISTER_CMD(an);
+	REGISTER_CMD(cn);
+	REGISTER_CMD(vn);
+	REGISTER_CMD(ii);
+	REGISTER_CMD(li);
 
 //----- Control commands
+	REGISTER_CMD(fc);
+	REGISTER_CMD(am);
+	REGISTER_CMD(dm);
+	REGISTER_CMD(rs);
+	REGISTER_CMD(fl);
 	REGISTER_CMD(rst);
 
 //----- Test commands
 	REGISTER_CMD(test_sms);
-	REGISTER_CMD(cal);
-	REGISTER_CMD(go);
-	REGISTER_CMD(sta);
 }
 
 /**
