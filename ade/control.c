@@ -179,6 +179,7 @@ static void btn_task(iptr_t timer) {
 	// Button pressed BTN_CHECK_SEC < t < BTN_CHECK_SEC+BTN_RESET_SEC
 	LED_NOTIFY_OFF();
 	ERR_OFF();
+	controlFlags &= ~CF_SPOILED;
 	controlCalibration();
 
 }
@@ -234,6 +235,9 @@ static uint16_t chMask = 0xFFFF;
 
 /** The mask of channels with fault samples */
 static uint16_t chFaulty = 0x0000;
+
+/** The mask of channels in fault state */
+uint16_t chSpoiled = 0x0000;
 
 /** @brief The current running mode */
 static running_modes_t rmode = CALIBRATION;
@@ -653,14 +657,27 @@ static void notifyLoss(uint8_t ch) {
 	timer_delay(10000);
 }
 
+static inline uint8_t isCritical(uint8_t ch) {
+	uint16_t critChs = ee_getCriticalChMask();
+
+	return (critChs & BV16(ch));
+
+}
+
+void controlSetSpoiled(void) {
+	// Light-up Fault LED (and switch the Relè)
+	ERR_ON();
+	controlFlags |= CF_SPOILED;
+}
+
 /** @brief Defines the monitoring policy for each channel */
 static void monitor(uint8_t ch) {
 
 	if (!chLoadLoss(ch))
 		return;
 
-	// Light-up Fault LED (and switch the Relè)
-	ERR_ON();
+	if (isCritical(ch))
+		controlSetSpoiled();
 
 	// Fault detected
 	rmode = FAULT;

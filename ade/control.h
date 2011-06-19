@@ -85,6 +85,19 @@ inline uint8_t controlMonitoringEnabled(void);
 inline uint8_t controlMonitoringEnabled(void) {
 	return (controlFlags & CF_MONITORING);
 }
+
+extern uint16_t chSpoiled;
+inline uint16_t controlGetSpoiledMask(void);
+inline uint16_t controlGetSpoiledMask(void) {
+	return chSpoiled;
+}
+
+inline uint8_t controlCriticalSpoiled(void);
+inline uint8_t controlCriticalSpoiled(void) {
+	return (controlFlags & CF_SPOILED);
+}
+
+void controlSetSpoiled(void);
 #if CONFIG_CONTROL_TESTING 
 void NORETURN chsTesting(void);
 #else
