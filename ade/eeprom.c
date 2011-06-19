@@ -21,7 +21,8 @@ eeprom_conf_t EEMEM eeconf = {
 	.sms_mesg =
 			"Allarme impianto RCT\0DEADBEEFDEADBEEFDEADBEEFDEADB"
 			"EEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBE\0",
-
+	.enabledChannelsMask = 0x0000,
+	.criticalChannelsMask = 0x0000,
 };
 
 static int8_t ee_setBytes(uint8_t *eep, const char *buf, uint8_t size) {
@@ -106,21 +107,27 @@ int8_t ee_setSmsText(const char *buf) {
 
 }
 
-int8_t ee_setChMask(uint16_t chMask) {
-	return ee_setBytes(
-			(uint8_t*)eeconf.enabledChannelsMask,
-			(const char*)&chMask, 2);
+void ee_setEnabledChMask(uint16_t chMask) {
+	eeprom_update_word(
+			(uint16_t*)&eeconf.enabledChannelsMask,
+			chMask);
 }
 
-int16_t ee_getChMask(void) {
-	uint16_t chMask;
-	ee_getBytes(
-			(uint8_t*)eeconf.enabledChannelsMask,
-			(char*)&chMask, 2);
-	return chMask;
+int16_t ee_getEnabledChMask(void) {
+	return eeprom_read_word(
+			(uint16_t*)&eeconf.enabledChannelsMask);
 }
 
+void ee_setCriticalChMask(uint16_t chMask) {
+	eeprom_update_word(
+			(uint16_t*)&eeconf.criticalChannelsMask,
+			chMask);
+}
 
+int16_t ee_getCriticalChMask(void) {
+	return eeprom_read_word(
+			(uint16_t*)&eeconf.criticalChannelsMask);
+}
 
 void ee_dumpConf(void) {
 	uint8_t i;
@@ -142,10 +149,13 @@ void ee_dumpConf(void) {
 	LOG_INFO(" SMS Text: %s\r\n", buff);
 	timer_delay(5);
 
-	chMask = ee_getChMask();
-	LOG_INFO(" Enabled CHs: 0x%X\r\n", chMask);
+	chMask = ee_getEnabledChMask();
+	LOG_INFO(" Enabled CHs: 0x%04X\r\n", chMask);
 	timer_delay(5);
 
+	chMask = ee_getCriticalChMask();
+	LOG_INFO(" Critical CHs: 0x%04X\r\n", chMask);
+	timer_delay(5);
 }
 
 
