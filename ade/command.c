@@ -159,8 +159,134 @@ MAKE_CMD(li, "", "s",
 	RC_OK;
 }), 0)
 ;
-({
 
+/**
+ * @brief Return the channel mask corresponding to the input string
+ *
+ * Inout string have this format: "([0-9][0-6]? )+", which essentially
+ * correspond to a list of channels.
+ * If the first number is 0, the rest of the string could be discarded and
+ * 0xFFFF (all channels) is returned. Otherwise, a bitmask is returned where a
+ * 1b is set for each channel in the list.
+ *
+ */
+static uint16_t getChannelsMask(char const *buff) {
+	uint16_t mask = 0x0000;
+	char const *c = buff;
+	int ch;
+
+	// Get next token
+	while (*c) {
+
+		ch = 0;
+		for ( ; (*c != ' ' && *c); ++c) {
+
+				// Abort on un-expected input
+                if ((*c < '0') || (*c > '9'))
+                        return 0x0000;
+
+				// Otherwise: update the current channel
+				ch *= 10;
+				ch += (*c-'0');
+
+				LOG_INFO("c=%c, ch=%d\n", *c, ch);
+		}
+
+		// CH=0 => all channels are enabled
+		if (ch == 0)
+			return 0xFFFF;
+
+		// Otherwise: update the mask
+		mask |= BV16(ch-1);
+
+		// Go on with next channel
+		c++;
+	}		
+
+	return mask;
+}
+
+
+//----- CMD: ADD ENABLED CHANNELS
+MAKE_CMD(aa, "t", "",
+({
+	uint16_t eCh, nCh;
+
+	LOG_INFO("<= Aggiungi abilitati: %s", args[1].s);
+
+	nCh = getChannelsMask(args[1].s);
+	if (nCh) {
+		eCh = ee_getEnabledChMask();
+		eCh |= nCh;
+		ee_setEnabledChMask(eCh);
+
+		LOG_INFO(" (0x%04X, 0x%04X)\r\n", nCh, eCh);
+	}
+
+	LOG_INFO("\r\n");
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: REMOVE ENABLED CHANNELS
+MAKE_CMD(ra, "t", "",
+({
+	uint16_t eCh, nCh;
+
+	LOG_INFO("<= Rimuovi abilitati: %s", args[1].s);
+
+	nCh = getChannelsMask(args[1].s);
+	if (nCh) {
+		eCh = ee_getEnabledChMask();
+		eCh &= ~nCh;
+		ee_setEnabledChMask(eCh);
+
+		LOG_INFO(" (0x%04X, 0x%04X)\r\n", nCh, eCh);
+	}
+
+	LOG_INFO("\r\n");
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: ADD CRITICAL CHANNELS
+MAKE_CMD(ac, "t", "",
+({
+	uint16_t eCh, nCh;
+
+	LOG_INFO("<= Aggiungi critici: %s", args[1].s);
+
+	nCh = getChannelsMask(args[1].s);
+	if (nCh) {
+		eCh = ee_getCriticalChMask();
+		eCh |= nCh;
+		ee_setCriticalChMask(eCh);
+
+		LOG_INFO(" (0x%04X, 0x%04X)\r\n", nCh, eCh);
+	}
+
+	LOG_INFO("\r\n");
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: REMOVE CRITICAL CHANNELS
+MAKE_CMD(rc, "t", "",
+({
+	uint16_t eCh, nCh;
+
+	LOG_INFO("<= Rimuovi critici: %s", args[1].s);
+
+	nCh = getChannelsMask(args[1].s);
+	if (nCh) {
+		eCh = ee_getCriticalChMask();
+		eCh &= ~nCh;
+		ee_setCriticalChMask(eCh);
+
+		LOG_INFO(" (0x%04X, 0x%04X)\r\n", nCh, eCh);
+	}
+
+	LOG_INFO("\r\n");
 	RC_OK;
 }), 0)
 ;
@@ -240,6 +366,10 @@ void command_init(void) {
 	REGISTER_CMD(vn);
 	REGISTER_CMD(ii);
 	REGISTER_CMD(li);
+	REGISTER_CMD(aa);
+	REGISTER_CMD(ra);
+	REGISTER_CMD(ac);
+	REGISTER_CMD(rc);
 
 //----- Control commands
 	REGISTER_CMD(fc);
