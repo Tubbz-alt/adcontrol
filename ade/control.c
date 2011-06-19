@@ -283,10 +283,9 @@ typedef struct chData {
 } chData_t;
 
 /** The mask of channels to be monitored */
-//static uint16_t chMask = 0xFFFF;
-static uint16_t chMask = 0xFFFF;
-#define ee_getChMask(V) ((uint16_t)0x3000)
-#warning MASKING ee_getChMask FORCING ENABLED CHANNELS (0x3000)
+static uint16_t chMask = 0x0000;
+//#define ee_getEnabledChMask(V) ((uint16_t)0xFF00)
+//#warning MASKING ee_getEnabledChMask FORCING ENABLED CHANNELS (0xFF00)
 
 /** The mask of channels with fault samples */
 static uint16_t chFaulty = 0x0000;
@@ -885,7 +884,7 @@ void controlSetup(void) {
 	meter_ade7753_dumpConf();
 
 	// Get bitmask of enabled channels
-	chMask = ee_getChMask();
+	chMask = ee_getEnabledChMask();
 
 	// Enabling calibration only for enabled channels
 	chCalib = chMask;
