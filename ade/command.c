@@ -48,6 +48,16 @@ MAKE_CMD(ping, "", "",
 	RC_OK;
 }), 0)
 
+//----- CMD: PRINT HELP (console only)
+MAKE_CMD(help, "", "",
+({
+	//Silence "args not used" warning.
+	(void)args;
+	LOG_INFO("%s", args[0].s);
+
+	RC_OK;
+}), 0)
+
 /* Reset */
 MAKE_CMD(reset, "", "",
 ({
@@ -66,9 +76,20 @@ MAKE_CMD(reset, "", "",
 	0;
 }), 0)
 
+//----- CMD: Test SMS commands from console
+MAKE_CMD(test_sms, "t", "",
+({
+ 	
+	//Silence "args not used" warning.
+	(void)args;
 
-//----- CMD: PRINT HELP (console only)
-MAKE_CMD(help, "", "",
+	LOG_INFO("SMS: %s", args[1].s);
+
+	smsSplitAndParse("+393473153808", args[1].s);
+
+	RC_OK;
+}), 0)
+
 ({
 	//Silence "args not used" warning.
 	(void)args;
@@ -215,6 +236,9 @@ void command_init(void) {
 
 //----- Control commands
 	REGISTER_CMD(rst);
+
+//----- Test commands
+	REGISTER_CMD(test_sms);
 	REGISTER_CMD(cal);
 	REGISTER_CMD(go);
 	REGISTER_CMD(sta);

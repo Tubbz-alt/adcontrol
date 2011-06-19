@@ -95,6 +95,58 @@ static void updateCSQ(void) {
 		if (csq>16) csq = 3;
 	}
 	LED_GSM_CSQ(csq);
+
+	// TODO if not network attached: force network scanning and attaching
+}
+void smsSplitAndParse(char const *from, char *sms) {
+	char *cmd = sms;
+	char *cmdEnd = sms;
+
+	// Reset response buffer
+	cmdBuff[0] = '\0';
+
+	while (*cmdEnd) {
+		
+		// Find command separator, or end of SMS
+		for ( ; (*cmdEnd && *cmdEnd != ';'); ++cmdEnd)
+			;// nop
+		
+		// 
+		if (*cmdEnd == ';') {
+			*cmdEnd = '\0';
+		}
+
+		// lowercase current command
+		for (char *p = cmd; *p != ' ' && *p; ++p) {
+			if (*p >= 'A' && *p <= 'Z')
+				*p += 'a'-'A';
+		}
+
+		DB2(LOG_INFO("CMD: %s\r\n", cmd));
+
+		// Parse current command
+		command_parse(&dbg_port.fd, cmd);
+
+		// Go on with next command
+		*cmdEnd = ';';
+		for ( ; *cmdEnd; ++cmdEnd) {
+			if ((*cmdEnd != ';') && (*cmdEnd != ' '))
+				break;
+		}
+		cmd = cmdEnd;
+
+	}
+
+	// If a non empty buffer has been setup: send it as response
+	if (cmdBuff[0] == '\0')
+		return;
+
+	LOG_INFO("Notifing [%s]...\r\n", msg.from);
+	GSM(gsmSMSSend(from, cmdBuff));
+
+	// Wait for SMS being delivered
+	timer_delay(10000);
+
 }
 
 // The task to process SMS events
@@ -105,6 +157,9 @@ static void sms_task(iptr_t timer) {
 
 	DB(LOG_INFO("Checking for SMS commands...\r\n"));
 
+	// Update signal level
+	GSM(updateCSQ());
+
 	// Retrive the first SMS into memory
 	GSM(smsIndex = gsmSMSByIndex(&msg, 1));
 	if (smsIndex==1) {
@@ -113,8 +168,8 @@ static void sms_task(iptr_t timer) {
 		GSM(gsmSMSDel(1));
 	}
 
-	// Update signal level
-	GSM(updateCSQ());
+	// Process SMS commands
+	smsSplitAndParse(msg.from, msg.text);
 
 	// Reschedule this timer
 	synctimer_add(&sms_tmr, &timers_lst);

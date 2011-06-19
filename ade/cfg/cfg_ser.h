@@ -56,7 +56,7 @@
  * $WIZ$ type = "int"
  * $WIZ$ min = 2
  */
-#define CONFIG_UART0_RXBUFSIZE  32
+#define CONFIG_UART0_RXBUFSIZE  48
 
 /**
  * Size of the outbound FIFO buffer for port 1 [bytes].

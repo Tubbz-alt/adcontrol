@@ -98,6 +98,9 @@ inline uint8_t controlCriticalSpoiled(void) {
 }
 
 void controlSetSpoiled(void);
+
+void smsSplitAndParse(char const *from, char *sms);
+
 #if CONFIG_CONTROL_TESTING 
 void NORETURN chsTesting(void);
 #else
