@@ -19,7 +19,7 @@ eeprom_conf_t EEMEM eeconf = {
 		EMPTY_NUMBER"\0\0\0\0\0\0\0\0\0\0\0\0",
 	},
 	.sms_mesg =
-			"Allarme impianto RCT\0DEADBEEFDEADBEEFDEADBEEFDEADB"
+			"Impianto RCT non configurato\0DEADBEEFDEADBEEFDEADB"
 			"EEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBE\0",
 	.enabledChannelsMask = 0x0000,
 	.criticalChannelsMask = 0x0000,
