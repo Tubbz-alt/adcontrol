@@ -2,6 +2,7 @@
 #include "command.h"
 #include "control.h"
 #include "eeprom.h"
+#include "gsm.h"
 
 #include "cmd_ctor.h"  // MAKE_CMD, REGISTER_CMD
 #include "verstag.h"
@@ -342,8 +343,62 @@ MAKE_CMD(fl, "", "",
 //----- CMD: STATUS
 MAKE_CMD(rs, "", "s",
 ({
-	sprintf(cmdBuff, "Stato: ");
-	LOG_INFO("=> %s\r\n", cmdBuff);
+	uint8_t csq = gsmCSQ();
+	volatile uint16_t mask;
+	uint8_t pos = 0;
+	int len = 0;
+
+	len += sprintf(cmdBuff+len, "CA:");
+	mask = ee_getEnabledChMask();
+	if (!mask)
+		len += sprintf(cmdBuff+len, " Nessuno");
+	for (pos = 1; mask && pos<=16; ++pos, mask>>=1) {
+		LOG_INFO("CA: 0x%04X\n", mask);
+		if (mask & BV16(0)) {
+			len += sprintf(cmdBuff+len, " %d", pos);
+		}
+	}
+
+	len += sprintf(cmdBuff+len, "\nCC:");
+	mask = ee_getCriticalChMask();
+	if (!mask)
+		len += sprintf(cmdBuff+len, " Nessuno");
+	for (pos = 1; mask && pos <= 16; ++pos, mask>>=1) {
+		LOG_INFO("CC: 0x%04X\n", mask);
+		if (mask & BV(0)) {
+			len += sprintf(cmdBuff+len, " %d", pos);
+		}
+	}
+
+	len += sprintf(cmdBuff+len, "\nCF:");
+	mask = controlGetSpoiledMask();
+	if (!mask)
+		len += sprintf(cmdBuff+len, " Nessuno");
+	for (pos = 1; mask && pos <= 16; ++pos, mask>>=1) {
+		LOG_INFO("CF: 0x%04X\n", mask);
+		if (mask & BV16(0)) {
+			len += sprintf(cmdBuff+len, " %d", pos);
+		}
+	}
+
+	len += sprintf(cmdBuff+len, "\nGSM: %d (", csq);
+	if (csq == 0 || csq == 99)
+		len += sprintf(cmdBuff+len, "UNK)");
+	else if (csq>2)
+		len += sprintf(cmdBuff+len, "Basso)");
+	else if (csq>8)
+		len += sprintf(cmdBuff+len, "Buono)");
+	else if (csq>16)
+		len += sprintf(cmdBuff+len, "Ottimo)");
+
+	len += sprintf(cmdBuff+len, "\nAUX: ");
+	if (controlCriticalSpoiled()) {
+		len += sprintf(cmdBuff+len, "LAMP");
+	} else {
+		len += sprintf(cmdBuff+len, "NORM");
+	}
+
+	LOG_INFO("State:\r\n%s\r\n", cmdBuff);
 	args[1].s = cmdBuff;
 
 	RC_OK;

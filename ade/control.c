@@ -313,9 +313,6 @@ const uint32_t minLoadVariation = (
 /** Control flasg */
 uint8_t controlFlags = CF_MONITORING;
 
-/** The buffer defined by the GSM module */
-extern char cmdBuff[161];
-
 //=====[ Channel Selection ]====================================================
 
 uint8_t chSelectionMap[] = {
