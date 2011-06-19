@@ -69,6 +69,22 @@ void controlCalibration(void);
 void controlSetup(void);
 void controlLoop(void);
 
+extern uint8_t controlFlags;
+#define CF_MONITORING 		0x01
+#define CF_SPOILED 			0x02
+
+inline void controlEnableMonitoring(void);
+inline void controlEnableMonitoring(void) {
+	controlFlags |=  CF_MONITORING;
+}
+inline void controlDisableMonitoring(void);
+inline void controlDisableMonitoring(void) {
+	controlFlags &= ~CF_MONITORING;
+}
+inline uint8_t controlMonitoringEnabled(void);
+inline uint8_t controlMonitoringEnabled(void) {
+	return (controlFlags & CF_MONITORING);
+}
 #if CONFIG_CONTROL_TESTING 
 void NORETURN chsTesting(void);
 #else

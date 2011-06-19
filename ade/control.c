@@ -251,6 +251,8 @@ const uint32_t loadFault = ADE_IRMS_LOAD_FAULT;
 const uint32_t minLoadVariation = (
 		ADE_IRMS_LOAD_FAULT>>ADE_LOAD_CALIBRATION_FACTOR);
 
+/** Control flasg */
+uint8_t controlFlags = CF_MONITORING;
 
 /** The buffer defined by the GSM module */
 extern char cmdBuff[161];
