@@ -25,23 +25,23 @@ eeprom_conf_t EEMEM eeconf = {
 	.criticalChannelsMask = 0x0000,
 };
 
-static int8_t ee_setBytes(uint8_t *eep, const char *buf, uint8_t size) {
-	uint8_t i;
-	for (i=0; i<size; i++) {
-		eeprom_update_byte(eep, (uint8_t)(*buf));
-		buf++; eep++;
-	}
-	return i;
-}
-
-static int8_t ee_getBytes(const uint8_t *eep, char *buf, uint8_t size) {
-	uint8_t i;
-	for (i=0; i<size; i++) {
-		(*buf) = eeprom_read_byte(eep);
-		buf++; eep++;
-	}
-	return i;
-}
+//static int8_t ee_setBytes(uint8_t *eep, const uint8_t *buf, uint8_t size) {
+//	uint8_t i;
+//	for (i=0; i<size; i++) {
+//		eeprom_update_byte(eep, (*buf));
+//		buf++; eep++;
+//	}
+//	return i;
+//}
+//
+//static int8_t ee_getBytes(const uint8_t *eep, uint8_t *buf, uint8_t size) {
+//	uint8_t i;
+//	for (i=0; i<size; i++) {
+//		(*buf) = eeprom_read_byte(eep);
+//		buf++; eep++;
+//	}
+//	return i;
+//}
 
 static int8_t ee_setString(uint8_t *eep, const char *str, uint8_t size) {
 	uint8_t i;
