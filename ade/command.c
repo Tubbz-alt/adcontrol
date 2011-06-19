@@ -30,14 +30,14 @@ char cmdBuff[161];
 MAKE_CMD(ver, "", "s",
 ({
 	args[1].s = vers_tag;
-	0;
+	RC_OK;
 }), 0);
 
 /* Sleep. Example of declaring function body directly in macro call.  */
 MAKE_CMD(sleep, "d", "",
 ({
 	timer_delay((mtime_t)args[1].l);
-	0;
+	RC_OK;
 }), 0)
 
 /* Ping.  */
@@ -45,7 +45,7 @@ MAKE_CMD(ping, "", "",
 ({
 	//Silence "args not used" warning.
 	(void)args;
-	0;
+	RC_OK;
 }), 0)
 
 /* Reset */
@@ -55,9 +55,12 @@ MAKE_CMD(reset, "", "",
 	(void)args;
 	wdt_enable(WDTO_2S);
 
-	/*We want to have an infinite loop that lock access on watchdog timer.
-	This piece of code it's equivalent to a while(true), but we have done this because
-	gcc generate a warning message that suggest to use "noreturn" parameter in function reset.*/
+	/*
+	 * We want to have an infinite loop that lock access on watchdog timer.
+	 * This piece of code it's equivalent to a while(true), but we have done this
+	 * because gcc generate a warning message that suggest to use "noreturn"
+	 * parameter in function reset.
+	 */
 	ASSERT(args);
 	while(args);
 	0;
@@ -73,6 +76,10 @@ MAKE_CMD(help, "", "",
 
 	RC_OK;
 }), 0)
+
+/*******************************************************************************
+ * Configuration Commands
+ ******************************************************************************/
 
 //----- CMD: NUMBER ADD
 MAKE_CMD(add, "ds", "",
@@ -150,6 +157,10 @@ MAKE_CMD(rst, "", "",
 }), 0)
 ;
 
+/*******************************************************************************
+ * Control Commands
+ ******************************************************************************/
+
 //----- CMD: MODE CALIBRATION
 MAKE_CMD(cal, "", "",
 ({
@@ -186,17 +197,23 @@ MAKE_CMD(sta, "", "s",
 
 /* Register commands.  */
 void command_init(void) {
+
+//----- System commands
 	REGISTER_CMD(ver);
 	REGISTER_CMD(sleep);
 	REGISTER_CMD(ping);
 	REGISTER_CMD(reset);
 
 	REGISTER_CMD(help);
+
+//----- Configuration commands
 	REGISTER_CMD(add);
 	REGISTER_CMD(del);
 	REGISTER_CMD(num);
 	REGISTER_CMD(msgw);
 	REGISTER_CMD(msgr);
+
+//----- Control commands
 	REGISTER_CMD(rst);
 	REGISTER_CMD(cal);
 	REGISTER_CMD(go);
