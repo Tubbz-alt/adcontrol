@@ -11,10 +11,6 @@
 
 #define CONSOLE_BUFFER_SIZE 100
 
-static void console_prompt(KFile *fd) {
-	kfile_print(fd, "$ ");
-}
-
 void console_run(KFile *fd) {
 	static char linebuf[CONSOLE_BUFFER_SIZE];
 
@@ -28,6 +24,7 @@ void console_run(KFile *fd) {
 
 /* Initialization: readline context, parser and register commands.  */
 void console_init(KFile *fd) {
+	(void)fd;
 	parser_init();
 	command_init();
 }
