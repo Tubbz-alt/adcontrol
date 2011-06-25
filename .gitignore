@@ -4,3 +4,5 @@ buildrev.h
 *.eep
 *.log
 *.swo
+obj
+images
