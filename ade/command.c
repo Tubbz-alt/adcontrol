@@ -30,6 +30,7 @@ char cmdBuff[161];
  */
 MAKE_CMD(ver, "", "s",
 ({
+	LOG_INFO("\n\nF/W Ver: %s\n\n", args[1].s);
 	args[1].s = vers_tag;
 	RC_OK;
 }), 0);
@@ -46,6 +47,7 @@ MAKE_CMD(ping, "", "",
 ({
 	//Silence "args not used" warning.
 	(void)args;
+	LOG_INFO("\n\nRFN - by Patrick Bellasi (derkling@gmail.com) - for RCT\n\n");
 	RC_OK;
 }), 0)
 
@@ -54,7 +56,8 @@ MAKE_CMD(help, "", "",
 ({
 	//Silence "args not used" warning.
 	(void)args;
-	LOG_INFO("%s", args[0].s);
+	// FIXME provide an on-line help
+	LOG_INFO("\n\nHelp: (To Be Done)\n\n");
 
 	RC_OK;
 }), 0)
@@ -64,6 +67,8 @@ MAKE_CMD(rst, "", "",
 ({
 	//Silence "args not used" warning.
 	(void)args;
+
+	LOG_INFO("\n\nReset in 2[s]...\n\n");
 	wdt_enable(WDTO_2S);
 
 	/*
@@ -84,12 +89,13 @@ MAKE_CMD(test_sms, "t", "",
 	//Silence "args not used" warning.
 	(void)args;
 
-	LOG_INFO("SMS: %s", args[1].s);
+	LOG_INFO("\n\nSMS: %s\n\n", args[1].s);
 
 	smsSplitAndParse("+393473153808", args[1].s);
 
 	RC_OK;
 }), 0)
+
 
 /*******************************************************************************
  * Configuration Commands
@@ -98,7 +104,7 @@ MAKE_CMD(test_sms, "t", "",
 //----- CMD: NUMBER ADD
 MAKE_CMD(an, "ds", "",
 ({
-	LOG_INFO("<= Aggiungi Numero %ld) %s)\r\n",
+	LOG_INFO("\n\n<= Aggiungi Numero %ld) %s)\r\n\n",
 		args[1].l, args[2].s);
 	ee_setSmsDest(args[1].l, args[2].s);
 	RC_OK;
@@ -107,7 +113,7 @@ MAKE_CMD(an, "ds", "",
 //----- CMD: NUMBER DEL
 MAKE_CMD(cn, "d", "",
 ({
-	LOG_INFO("<= Rimuovi numero %ld)\r\n",
+	LOG_INFO("\n\n<= Rimuovi numero %ld)\r\n\n",
 		args[1].l);
 	ee_setSmsDest(args[1].l, EMPTY_NUMBER);
 	RC_OK;
@@ -130,7 +136,8 @@ MAKE_CMD(vn, "", "s",
 		timer_delay(5);
 	}
 
-	LOG_INFO("=> %s\r\n", cmdBuff);
+	LOG_INFO("\n\n%s\r\n\n", cmdBuff);
+
 	args[1].s = cmdBuff;
 
 	RC_OK;
@@ -140,7 +147,7 @@ MAKE_CMD(vn, "", "s",
 //----- CMD: MESSAGE SET
 MAKE_CMD(ii, "t", "",
 ({
-	LOG_INFO("<= Imposta Identificazione: %s\r\n",
+	LOG_INFO("\n\n<= Imposta Identificazione: %s\r\n\n",
 		args[1].s);
 	ee_setSmsText(args[1].s);
 	RC_OK;
@@ -154,9 +161,9 @@ MAKE_CMD(li, "", "s",
 
 	ee_getSmsText(buff, MAX_MSG_TEXT);
 	sprintf(cmdBuff, "Identificazione: %s ", buff);
-	LOG_INFO("=> %s\r\n", cmdBuff);
-	args[1].s = cmdBuff;
+	LOG_INFO("\n\n=> %s\r\n\n", cmdBuff);
 
+	args[1].s = cmdBuff;
 	RC_OK;
 }), 0)
 ;
@@ -181,16 +188,12 @@ static uint16_t getChannelsMask(char const *buff) {
 
 		ch = 0;
 		for ( ; (*c != ' ' && *c); ++c) {
-
 				// Abort on un-expected input
-                if ((*c < '0') || (*c > '9'))
-                        return 0x0000;
-
+				if ((*c < '0') || (*c > '9'))
+						return 0x0000;
 				// Otherwise: update the current channel
 				ch *= 10;
 				ch += (*c-'0');
-
-				LOG_INFO("c=%c, ch=%d\n", *c, ch);
 		}
 
 		// CH=0 => all channels are enabled
@@ -214,7 +217,7 @@ MAKE_CMD(aa, "t", "",
 ({
 	uint16_t eCh, nCh;
 
-	LOG_INFO("<= Aggiungi abilitati: %s", args[1].s);
+	LOG_INFO("\n\n<= Aggiungi abilitati: %s\r\n\n", args[1].s);
 
 	nCh = getChannelsMask(args[1].s);
 	if (nCh) {
@@ -223,10 +226,9 @@ MAKE_CMD(aa, "t", "",
 		ee_setEnabledChMask(eCh);
 		controlSetEnabled(eCh);
 
-		LOG_INFO(" (0x%04X, 0x%04X)\r\n", nCh, eCh);
+		LOG_INFO(" (0x%04X, 0x%04X)\n\n", nCh, eCh);
 	}
 
-	LOG_INFO("\r\n");
 	RC_OK;
 }), 0)
 ;
@@ -236,7 +238,7 @@ MAKE_CMD(ra, "t", "",
 ({
 	uint16_t eCh, nCh;
 
-	LOG_INFO("<= Rimuovi abilitati: %s", args[1].s);
+	LOG_INFO("\n\n<= Rimuovi abilitati: %s\r\n\n", args[1].s);
 
 	nCh = getChannelsMask(args[1].s);
 	if (nCh) {
@@ -245,10 +247,9 @@ MAKE_CMD(ra, "t", "",
 		ee_setEnabledChMask(eCh);
 		controlSetEnabled(eCh);
 
-		LOG_INFO(" (0x%04X, 0x%04X)\r\n", nCh, eCh);
+		LOG_INFO(" (0x%04X, 0x%04X)\n\n", nCh, eCh);
 	}
 
-	LOG_INFO("\r\n");
 	RC_OK;
 }), 0)
 ;
@@ -258,7 +259,7 @@ MAKE_CMD(ac, "t", "",
 ({
 	uint16_t cCh, nCh;
 
-	LOG_INFO("<= Aggiungi critici: %s", args[1].s);
+	LOG_INFO("\n\n<= Aggiungi critici: %s\r\n\n", args[1].s);
 
 	nCh = getChannelsMask(args[1].s);
 	if (nCh) {
@@ -270,7 +271,6 @@ MAKE_CMD(ac, "t", "",
 		LOG_INFO(" (0x%04X, 0x%04X)\n\n", nCh, cCh);
 	}
 
-	LOG_INFO("\r\n");
 	RC_OK;
 }), 0)
 ;
@@ -280,7 +280,7 @@ MAKE_CMD(rc, "t", "",
 ({
 	uint16_t cCh, nCh;
 
-	LOG_INFO("<= Rimuovi critici: %s", args[1].s);
+	LOG_INFO("\n\n<= Rimuovi critici: %s\r\n\n", args[1].s);
 
 	nCh = getChannelsMask(args[1].s);
 	if (nCh) {
@@ -292,7 +292,6 @@ MAKE_CMD(rc, "t", "",
 		LOG_INFO(" (0x%04X, 0x%04X)\n\n", nCh, cCh);
 	}
 
-	LOG_INFO("\r\n");
 	RC_OK;
 }), 0)
 ;
@@ -306,7 +305,7 @@ MAKE_CMD(fc, "", "",
 ({
 	//Silence "args not used" warning.
 	(void)args;
-	LOG_INFO("<= Calibrazione forzata\r\n");
+	LOG_INFO("\n\n<= Calibrazione forzata\n\n");
 	controlCalibration();
 	RC_OK;
 }), 0)
@@ -317,18 +316,18 @@ MAKE_CMD(am, "", "",
 ({
 	//Silence "args not used" warning.
 	(void)args;
-	LOG_INFO("<= Monitoraggio abilitato\r\n");
+	LOG_INFO("\n\n<= Monitoraggio abilitato\n\n");
 	controlEnableMonitoring();
 	RC_OK;
 }), 0)
 ;
 
 //----- CMD: DISABLE MONITORING
-MAKE_CMD(dm, "", "s",
+MAKE_CMD(dm, "", "",
 ({
 	//Silence "args not used" warning.
 	(void)args;
-	LOG_INFO("<= Monitoraggio disabilitato\r\n");
+	LOG_INFO("\n\n<= Monitoraggio disabilitato\n\n");
 	controlDisableMonitoring();
 	RC_OK;
 }), 0)
@@ -339,7 +338,7 @@ MAKE_CMD(fl, "", "",
 ({
 	//Silence "args not used" warning.
 	(void)args;
-	LOG_INFO("<= Lampeggio Forzato\r\n");
+	LOG_INFO("\n\n<= Lampeggio Forzato\n\n");
 	controlSetSpoiled();
 	RC_OK;
 }), 0)
@@ -375,7 +374,7 @@ MAKE_CMD(rs, "", "s",
 		}
 	}
 
-	len += sprintf(cmdBuff+len, "\nCF:");
+	len += sprintf(cmdBuff+len, "\r\nCF:");
 	mask = controlGetSpoiledMask();
 	if (!mask)
 		len += sprintf(cmdBuff+len, " Nessuno");
@@ -386,7 +385,7 @@ MAKE_CMD(rs, "", "s",
 		}
 	}
 
-	len += sprintf(cmdBuff+len, "\nGSM: %d (", csq);
+	len += sprintf(cmdBuff+len, "\r\nGSM: %d (", csq);
 	if (csq == 0 || csq == 99)
 		len += sprintf(cmdBuff+len, "UNK)");
 	else if (csq>2)
@@ -396,14 +395,14 @@ MAKE_CMD(rs, "", "s",
 	else if (csq>16)
 		len += sprintf(cmdBuff+len, "Ottimo)");
 
-	len += sprintf(cmdBuff+len, "\nAUX: ");
+	len += sprintf(cmdBuff+len, "\r\nAUX: ");
 	if (controlCriticalSpoiled()) {
 		len += sprintf(cmdBuff+len, "LAMP");
 	} else {
 		len += sprintf(cmdBuff+len, "NORM");
 	}
 
-	LOG_INFO("State:\r\n%s\r\n", cmdBuff);
+	LOG_INFO("\n\nStato RFN:\n%s\n\n", cmdBuff);
 	args[1].s = cmdBuff;
 
 	RC_OK;
@@ -451,9 +450,9 @@ void command_init(void) {
  */
 INLINE void NAK(KFile *fd, const char *err) {
 #ifdef _DEBUG
-	kfile_printf(fd, "NAK \"%s\"\r\n", err);
+	kfile_printf(fd, "\nNAK \"%s\"\r\n", err);
 #else
-	kfile_printf(fd, "NAK\r\n");
+	kfile_printf(fd, "\nNAK\r\n");
 #endif
 }
 
@@ -487,13 +486,13 @@ void command_parse(KFile *fd, const char *buf) {
 	/* Command check.  */
 	templ = parser_get_cmd_template(buf);
 	if (!templ) {
-		kfile_print(fd, "-1 Invalid command.\r\n");
+		kfile_print(fd, "\n-1 Invalid command.\r\n");
 		return;
 	}
 
 	/* Args Check.  TODO: Handle different case. see doc/PROTOCOL .  */
 	if (!parser_get_cmd_arguments(buf, templ, args)) {
-		kfile_print(fd, "-2 Invalid arguments.\r\n");
+		kfile_print(fd, "\n-2 Invalid arguments.\r\n");
 		return;
 	}
 
@@ -502,9 +501,12 @@ void command_parse(KFile *fd, const char *buf) {
 		NAK(fd, "Error in executing command.");
 	}
 
-	if (!command_reply(fd, templ, args)) {
-		NAK(fd, "Invalid return format.");
-	}
+	//if (!command_reply(fd, templ, args)) {
+	//	NAK(fd, "Invalid return format.");
+	//}
+
+	// Wait for console buffer to flush
+	timer_delay(500);
 
 	return;
 }
