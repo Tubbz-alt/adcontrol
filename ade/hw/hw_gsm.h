@@ -99,10 +99,13 @@ INLINE void gsm_powerOff(void)
 
 INLINE void gsm_reset(void)
 {
-	SET_LOW(RESET);
-	SET_OUT(RESET);
+	PORTD &= ~BV8(PD6);
+	DDRD |= BV8(PD6);
+	//SET_LOW(RESET);
+	//SET_OUT(RESET);
 	timer_delay(10);
-	SET_IN(RESET);
+	//SET_IN(RESET);
+	DDRD &= ~BV8(PD6);
 	timer_delay(2000);
 }
 

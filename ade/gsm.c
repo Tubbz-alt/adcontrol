@@ -192,14 +192,17 @@ int8_t gsmPowerOn(void)
 		result = _gsmReadResult();
 		if (result == OK)
 			return result;
-#endif
 		// Not responding to AT comand... shut-down
 		gsm_powerOff();
 		timer_delay(10000);
+#endif
+		// Resetting the modem
+		LOG_INFO("GSM: Resetting...\n");
+		gsmReset();
+	} else {
+		LOG_INFO("GSM: Powering-on...\n");
+		gsm_powerOn();
 	}
-
-	LOG_INFO("GSM: Powering-on...\n");
-	gsm_powerOn();
 
 	// When DCE powers on with the autobauding enabled, it is recommended
 	// to wait 2 to 3 seconds before sending the first AT character.
