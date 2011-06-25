@@ -892,6 +892,9 @@ void controlSetup(void) {
 	// Get bitmask of enabled channels
 	chEnabled = ee_getEnabledChMask();
 
+	// Get bitmask of enabled channels
+	chCritical = ee_getCriticalChMask();
+
 	// Enabling calibration only for enabled channels
 	chCalib = chEnabled;
 
