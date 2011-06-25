@@ -81,7 +81,7 @@ int main(void) {
 	/* Open the GSM port */
 	ser_init(&gsm_port, SER_UART1);
 	ser_setbaudrate(&gsm_port, 115200);
-	LED_GSM_CSQ(0);
+	LED_GSM_OFF();
 
 	/* Initialize ADE7753 SPI port and data structure */
 	spimaster_init(&spi_port, SER_SPI);

@@ -44,6 +44,10 @@
 #define LED_OFF()		(PORTB |=  BV8(PB1))
 #define LED_SWITCH()	(PINB  |=  BV8(PB1))
 
+#define LED_GSM_OFF() do {\
+	volatile uint8_t reg = PORTA;\
+	PORTA = (reg | 0xF0);\
+} while(0)
 #define LED_GSM_CSQ(level) do {\
 	volatile uint8_t reg = PORTA;\
 	PORTA = ((reg | 0xF0) & ~BV8(4+(level)));\
