@@ -387,12 +387,12 @@ MAKE_CMD(rs, "", "s",
 
 	len += sprintf(cmdBuff+len, "\r\nGSM: %d (", csq);
 	if (csq == 0 || csq == 99)
-		len += sprintf(cmdBuff+len, "UNK)");
-	else if (csq>2)
+		len += sprintf(cmdBuff+len, "Scarso)");
+	else if (csq<=4)
 		len += sprintf(cmdBuff+len, "Basso)");
-	else if (csq>8)
+	else if (csq<=16)
 		len += sprintf(cmdBuff+len, "Buono)");
-	else if (csq>16)
+	else
 		len += sprintf(cmdBuff+len, "Ottimo)");
 
 	len += sprintf(cmdBuff+len, "\r\nAUX: ");
