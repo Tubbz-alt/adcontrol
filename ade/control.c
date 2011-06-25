@@ -297,7 +297,7 @@ uint16_t chSpoiled = 0x0000;
 static running_modes_t rmode = CALIBRATION;
 
 /** @brief The mask of channels in calibration mode */
-static uint16_t chCalib = 0xFFFF;
+uint16_t chCalib = 0xFFFF;
 
 /** The vector of channels data */
 static chData_t chData[MAX_CHANNELS];

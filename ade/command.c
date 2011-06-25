@@ -220,6 +220,7 @@ MAKE_CMD(aa, "t", "",
 		eCh = ee_getEnabledChMask();
 		eCh |= nCh;
 		ee_setEnabledChMask(eCh);
+		controlSetEnabled(eCh);
 
 		LOG_INFO(" (0x%04X, 0x%04X)\r\n", nCh, eCh);
 	}
@@ -241,6 +242,7 @@ MAKE_CMD(ra, "t", "",
 		eCh = ee_getEnabledChMask();
 		eCh &= ~nCh;
 		ee_setEnabledChMask(eCh);
+		controlSetEnabled(eCh);
 
 		LOG_INFO(" (0x%04X, 0x%04X)\r\n", nCh, eCh);
 	}
@@ -349,7 +351,7 @@ MAKE_CMD(rs, "", "s",
 	int len = 0;
 
 	len += sprintf(cmdBuff+len, "CA:");
-	mask = ee_getEnabledChMask();
+	mask = controlEnabled();
 	if (!mask)
 		len += sprintf(cmdBuff+len, " Nessuno");
 	for (pos = 1; mask && pos<=16; ++pos, mask>>=1) {
