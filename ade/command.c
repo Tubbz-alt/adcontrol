@@ -199,6 +199,7 @@ static uint16_t getChannelsMask(char const *buff) {
 
 		// Otherwise: update the mask
 		mask |= BV16(ch-1);
+		//LOG_INFO("ch=%d, mask: 0x%04X\r\n", ch, mask);
 
 		// Go on with next channel
 		c++;
@@ -357,7 +358,7 @@ MAKE_CMD(rs, "", "s",
 	if (!mask)
 		len += sprintf(cmdBuff+len, " Nessuno");
 	for (pos = 1; mask && pos<=16; ++pos, mask>>=1) {
-		LOG_INFO("CA: 0x%04X\n", mask);
+		//LOG_INFO("CA: 0x%04X\n", mask);
 		if (mask & BV16(0)) {
 			len += sprintf(cmdBuff+len, " %d", pos);
 		}
@@ -368,7 +369,7 @@ MAKE_CMD(rs, "", "s",
 	if (!mask)
 		len += sprintf(cmdBuff+len, " Nessuno");
 	for (pos = 1; mask && pos <= 16; ++pos, mask>>=1) {
-		LOG_INFO("CC: 0x%04X\n", mask);
+		//LOG_INFO("CC: 0x%04X\n", mask);
 		if (mask & BV(0)) {
 			len += sprintf(cmdBuff+len, " %d", pos);
 		}
@@ -379,7 +380,7 @@ MAKE_CMD(rs, "", "s",
 	if (!mask)
 		len += sprintf(cmdBuff+len, " Nessuno");
 	for (pos = 1; mask && pos <= 16; ++pos, mask>>=1) {
-		LOG_INFO("CF: 0x%04X\n", mask);
+		//LOG_INFO("CF: 0x%04X\n", mask);
 		if (mask & BV16(0)) {
 			len += sprintf(cmdBuff+len, " %d", pos);
 		}

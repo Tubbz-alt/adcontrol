@@ -122,7 +122,7 @@ void smsSplitAndParse(char const *from, char *sms) {
 				*p += 'a'-'A';
 		}
 
-		DB2(LOG_INFO("CMD: %s\r\n", cmd));
+		//DB2(LOG_INFO("CMD: %s\r\n", cmd));
 
 		// Parse current command
 		command_parse(&dbg_port.fd, cmd);
