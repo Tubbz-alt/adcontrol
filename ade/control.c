@@ -241,11 +241,11 @@ static void btn_task(iptr_t timer) {
 
 //=====[ Channels Data ]========================================================
 
-#define chEnabled(CH)         (chMask & BV16(CH))
+#define isEnabled(CH)         (chEnabled & BV16(CH))
 #define chUncalibrated(CH)    (chCalib & BV16(CH))
 #define chMarkUncalibrated(CH)(chCalib |= BV16(CH))
 #define chMarkCalibrated(CH)  (chCalib &= ~BV16(CH))
-#define CalibrationDone()     (!(chCalib & chMask))
+#define CalibrationDone()     (!(chCalib & chEnabled))
 #define chGetMoreSamples(CH)  (chData[CH].calSamples)
 #define chMrkSample(CH)       (chData[CH].calSamples--)
 #define chRstSample(CH)       (chData[CH].calSamples = CONFIG_CALIBRATION_SAMPLES);
@@ -283,7 +283,7 @@ typedef struct chData {
 } chData_t;
 
 /** The mask of channels to be monitored */
-static uint16_t chMask = 0x0000;
+uint16_t chEnabled = 0x0000;
 //#define ee_getEnabledChMask(V) ((uint16_t)0xFF00)
 //#warning MASKING ee_getEnabledChMask FORCING ENABLED CHANNELS (0xFF00)
 
@@ -446,7 +446,7 @@ static uint8_t sampleChannel(void) {
 	uint16_t activeChs;
 
 	// Get powered on (and enabled) channels
-	activeChs = (getActiveChannels() & chMask);
+	activeChs = (getActiveChannels() & chEnabled);
 	if (!activeChs)
 		return MAX_CHANNELS;
 
@@ -507,7 +507,7 @@ sample:
 static inline uint8_t needCalibration(uint8_t ch) {
 
 	// Avoid loading of (disabled) channels
-	if (!chEnabled(ch))
+	if (!isEnabled(ch))
 		return 0;
 
 	// Abort if we are not on calibration mode
@@ -524,7 +524,7 @@ static inline uint8_t needCalibration(uint8_t ch) {
 
 static inline void chRecalibrate(uint8_t ch) {
 	// Avoid loading of (disabled) channels
-	if (!chEnabled(ch))
+	if (!isEnabled(ch))
 		return;
 	// Set required calibration points
 	chSetImax(ch, 0);
@@ -541,7 +541,7 @@ static void loadCalibrationData(uint8_t ch) {
 	// reboot... but right now we start with a dummy zero value.
 
 	// Avoid loading of (disabled) channels
-	if (!chEnabled(ch))
+	if (!isEnabled(ch))
 		return;
 
 	LOG_INFO("Loading calibration data CH[%02hd]\r\n", ch+1);
@@ -830,7 +830,7 @@ void NORETURN chsTesting(void) {
 	LOG_INFO(".:: CHs Testing\r\n");
 
 	// Enabling all channels
-	chMask = 0xFFFF;
+	chEnabled = 0xFFFF;
 	// Starting from CH[0]
 	curCh = 0;
 
@@ -884,10 +884,10 @@ void controlSetup(void) {
 	meter_ade7753_dumpConf();
 
 	// Get bitmask of enabled channels
-	chMask = ee_getEnabledChMask();
+	chEnabled = ee_getEnabledChMask();
 
 	// Enabling calibration only for enabled channels
-	chCalib = chMask;
+	chCalib = chEnabled;
 
 	// Setup channels calibration data
 	for (uint8_t ch=0; ch<16; ch++)
