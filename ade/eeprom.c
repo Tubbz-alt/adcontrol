@@ -138,9 +138,9 @@ void ee_dumpConf(void) {
 	timer_delay(5);
 
 	// Dump SMS destinations
-	for (i=0; i<MAX_SMS_DEST; i++) {
+	for (i=1; i<=MAX_SMS_DEST; i++) {
 		ee_getSmsDest(i, buff, MAX_SMS_NUM);
-		LOG_INFO(" SMS[%d]: %s\r\n", i+1, buff);
+		LOG_INFO(" SMS[%d]: %s\r\n", i, buff);
 		timer_delay(5);
 	}
 
