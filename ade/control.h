@@ -110,6 +110,16 @@ inline uint16_t controlEnabled(void) {
 	return chEnabled;
 }
 
+extern uint16_t chCritical;
+inline void controlSetCritical(uint16_t mask);
+inline void controlSetCritical(uint16_t mask) {
+	chCritical = mask;
+}
+inline uint16_t controlCritical(void);
+inline uint16_t controlCritical(void) {
+	return chCritical;
+}
+
 void controlSetSpoiled(void);
 
 void smsSplitAndParse(char const *from, char *sms);

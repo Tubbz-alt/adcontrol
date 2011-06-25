@@ -287,6 +287,9 @@ uint16_t chEnabled = 0x0000;
 //#define ee_getEnabledChMask(V) ((uint16_t)0xFF00)
 //#warning MASKING ee_getEnabledChMask FORCING ENABLED CHANNELS (0xFF00)
 
+/** The mask of critical channels (which activiate AUX) */
+uint16_t chCritical = 0x0000;
+
 /** The mask of channels with fault samples */
 static uint16_t chFaulty = 0x0000;
 
@@ -709,10 +712,7 @@ static void notifyLoss(uint8_t ch) {
 }
 
 static inline uint8_t isCritical(uint8_t ch) {
-	uint16_t critChs = ee_getCriticalChMask();
-
-	return (critChs & BV16(ch));
-
+	return (chCritical & BV16(ch));
 }
 
 void controlSetSpoiled(void) {

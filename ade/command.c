@@ -255,17 +255,18 @@ MAKE_CMD(ra, "t", "",
 //----- CMD: ADD CRITICAL CHANNELS
 MAKE_CMD(ac, "t", "",
 ({
-	uint16_t eCh, nCh;
+	uint16_t cCh, nCh;
 
 	LOG_INFO("<= Aggiungi critici: %s", args[1].s);
 
 	nCh = getChannelsMask(args[1].s);
 	if (nCh) {
-		eCh = ee_getCriticalChMask();
-		eCh |= nCh;
-		ee_setCriticalChMask(eCh);
+		cCh = ee_getCriticalChMask();
+		cCh |= nCh;
+		ee_setCriticalChMask(cCh);
+		controlSetCritical(cCh);
 
-		LOG_INFO(" (0x%04X, 0x%04X)\r\n", nCh, eCh);
+		LOG_INFO(" (0x%04X, 0x%04X)\n\n", nCh, cCh);
 	}
 
 	LOG_INFO("\r\n");
@@ -276,17 +277,18 @@ MAKE_CMD(ac, "t", "",
 //----- CMD: REMOVE CRITICAL CHANNELS
 MAKE_CMD(rc, "t", "",
 ({
-	uint16_t eCh, nCh;
+	uint16_t cCh, nCh;
 
 	LOG_INFO("<= Rimuovi critici: %s", args[1].s);
 
 	nCh = getChannelsMask(args[1].s);
 	if (nCh) {
-		eCh = ee_getCriticalChMask();
-		eCh &= ~nCh;
-		ee_setCriticalChMask(eCh);
+		cCh = ee_getCriticalChMask();
+		cCh &= ~nCh;
+		ee_setCriticalChMask(cCh);
+		controlSetCritical(cCh);
 
-		LOG_INFO(" (0x%04X, 0x%04X)\r\n", nCh, eCh);
+		LOG_INFO(" (0x%04X, 0x%04X)\n\n", nCh, cCh);
 	}
 
 	LOG_INFO("\r\n");
@@ -361,8 +363,8 @@ MAKE_CMD(rs, "", "s",
 		}
 	}
 
-	len += sprintf(cmdBuff+len, "\nCC:");
-	mask = ee_getCriticalChMask();
+	len += sprintf(cmdBuff+len, "\r\nCC:");
+	mask = controlCritical();
 	if (!mask)
 		len += sprintf(cmdBuff+len, " Nessuno");
 	for (pos = 1; mask && pos <= 16; ++pos, mask>>=1) {
