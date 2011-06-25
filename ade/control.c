@@ -926,8 +926,17 @@ void controlLoop(void) {
 	ch = sampleChannel();
 	if (ch==MAX_CHANNELS) {
 		// No channels enabled... avoid calibration/monitoring
-		DB(LOG_INFO("Idle (UnCal: 0x%02X) %c\r",
-					chCalib, progress[i++%4]));
+		if (chCalib) {
+			DB(LOG_INFO("Idle (%s, Crit: 0x%04X, Cal: 0x%04X) %c\r",
+						controlMonitoringEnabled() ? "Mon" : "Dis",
+						chSpoiled,
+						chCalib, progress[i++%4]));
+		} else {
+			DB(LOG_INFO("Idle (%s, Crit: 0x%04X) %c\r",
+						controlMonitoringEnabled() ? "Mon" : "Dis",
+						chSpoiled,
+						progress[i++%4]));
+		}
 		timer_delay(500);
 		return;
 	}
