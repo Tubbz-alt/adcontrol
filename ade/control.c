@@ -554,7 +554,7 @@ static void loadCalibrationData(uint8_t ch) {
 
 void controlCalibration(void) {
 
-	LOG_WARN("Forcing re-calibration\r\n");
+	LOG_WARN("Forcing re-calibration\r\n\n");
 	for (uint8_t ch=0; ch<16; ch++) {
 		chRecalibrate(ch);
 	}
@@ -706,6 +706,8 @@ static void notifyLoss(uint8_t ch) {
 		LOG_INFO("Notifing [%s]...\r\n", dst);
 		GSM(gsmSMSSend(dst, msg));
 	}
+		
+	LOG_INFO("\n\n", dst);
 
 	// Wait for SMS being delivered
 	timer_delay(10000);
@@ -765,6 +767,8 @@ static void notifyFault(void) {
 		GSM(gsmSMSSend(dst, msg));
 	}
 
+	LOG_INFO("\n\n");
+
 	// Wait for SMS being delivered
 	timer_delay(10000);
 }
@@ -792,7 +796,7 @@ static void checkSignals(void) {
 	}
 	// Checking for BUTTON
 	if (signal_pending(SIGNAL_PLAT_BUTTON)) {
-		DB2(LOG_INFO("USR BUTTON [%d]\r\n", signal_status(SIGNAL_PLAT_BUTTON)));
+		DB2(LOG_INFO("USR BUTTON [%d]\r\n\n", signal_status(SIGNAL_PLAT_BUTTON)));
 		buttonHandler();
 	}
 }
@@ -818,6 +822,8 @@ static void notifyCalibrationCompleted(void) {
 		LOG_INFO("Notifing [%s]...\r\n", dst);
 		GSM(gsmSMSSend(dst, msg));
 	}
+
+	LOG_INFO("\n\n");
 
 	// Wait for SMS being delivered
 	timer_delay(10000);
@@ -936,7 +942,7 @@ void controlLoop(void) {
 			return;
 
 		// Notify calibration completion
-		LOG_INFO("CALIBRATION COMPLETED\r\n");
+		LOG_INFO("CALIBRATION COMPLETED\r\n\n");
 		LED_ON();
 		notifyCalibrationCompleted();
 		return;
