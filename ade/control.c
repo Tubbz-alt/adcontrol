@@ -551,6 +551,24 @@ static void loadCalibrationData(uint8_t ch) {
 	chRecalibrate(ch);
 }
 
+void controlSetEnabled(uint16_t mask) {
+	uint16_t chNew = (mask & (chEnabled ^ mask));
+	
+	LOG_INFO("New ENABLED Channels 0x%04X\r\n", chNew);
+
+	chCalib &= mask; // Remove disabled CHs
+	chCalib |= chNew; // Newly enabled channels
+	chEnabled = mask;
+
+	// Load calibration data for new channels
+	for (uint8_t pos = 0; chNew && pos < 16; ++pos, chNew>>=1) {
+		if (chNew & BV16(0)) {
+			loadCalibrationData(pos);
+		}
+	}
+
+}
+
 
 void controlCalibration(void) {
 

@@ -97,14 +97,9 @@ inline uint8_t controlCriticalSpoiled(void) {
 	return (controlFlags & CF_SPOILED);
 }
 
+void controlSetEnabled(uint16_t mask);
+
 extern uint16_t chEnabled;
-extern uint16_t chCalib;
-inline void controlSetEnabled(uint16_t mask);
-inline void controlSetEnabled(uint16_t mask) {
-	chCalib &= mask; // Remove disabled CHs
-	chCalib |= (mask & (chEnabled ^ mask)); // Newly enabled channels
-	chEnabled = mask;
-}
 inline uint16_t controlEnabled(void);
 inline uint16_t controlEnabled(void) {
 	return chEnabled;
