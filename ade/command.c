@@ -189,29 +189,38 @@ static uint16_t getChannelsMask(char const *buff) {
 	char const *c = buff;
 	int ch;
 
+	//LOG_INFO("getChannelsMaks(%s)\n", buff);
+
 	// Get next token
 	while (*c) {
+	
+		//LOG_INFO(">%c<\t", *c);
 
 		ch = 0;
-		for ( ; (*c != ' ' && *c); ++c) {
+		for ( ; (*c != ' ' && *c != ';' && *c); ++c) {
 				// Abort on un-expected input
-				if ((*c < '0') || (*c > '9'))
+				if ((*c < '0') || (*c > '9')) {
+						//LOG_ERR("Invalid parameter");
 						return 0x0000;
+				}
 				// Otherwise: update the current channel
 				ch *= 10;
 				ch += (*c-'0');
 		}
 
 		// CH=0 => all channels are enabled
-		if (ch == 0)
+		if (ch == 0) {
+			//LOG_WARN("Selecting all channels\n");
 			return 0xFFFF;
+		}
 
 		// Otherwise: update the mask
 		mask |= BV16(ch-1);
-		//LOG_INFO("ch=%d, mask: 0x%04X\r\n", ch, mask);
+		LOG_INFO("ch=%d, mask: 0x%04X\r\n", ch, mask);
 
 		// Go on with next channel
-		c++;
+		if (*c)
+			c++;
 	}		
 
 	return mask;
