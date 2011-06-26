@@ -852,7 +852,17 @@ static void notifyCalibrationCompleted(void) {
 
 	// Format SMS message
 	len = ee_getSmsText(msg, MAX_MSG_TEXT);
-	sprintf(msg+len, " - Calibrazione completata\r\n");
+	len += sprintf(msg+len, "\nCalibrazione completata\nSemaforo ");
+	if (controlCriticalSpoiled()) {
+		len += sprintf(cmdBuff+len, "in LAMPEGGIO");
+	} else if (controlGetSpoiledMask()) {
+		len += sprintf(cmdBuff+len, "GUASTO");
+	} else if (controlMonitoringEnabled()) {
+		len += sprintf(cmdBuff+len, "in MONITORAGGIO");
+	} else {
+		len += sprintf(cmdBuff+len, "NON monitorato");
+	}
+
 	LOG_INFO("SMS: %s", msg);
 
 	for (idx=0; idx<MAX_SMS_DEST; idx++) {
