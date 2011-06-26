@@ -444,6 +444,45 @@ static int8_t _gsmReadResult()
 	return result;
 }
 
+/*----- GSM Interface -----*/
+
+static uint8_t gsmUpdateCREG(void)
+{
+	int8_t resp;
+	char buff[16];
+
+	_gsmWriteLine("AT+CREG?");
+	resp = _gsmRead(buff, 16);
+	if (resp == -1) {
+		gsmConf.creg_n = 0;
+		gsmConf.creg_stat = UNKNOW;
+		return ERROR;
+	}
+
+	sscanf(buff, "+CREG: %hhu,%hhu",
+			&gsmConf.creg_n,
+			&gsmConf.creg_stat);
+
+	return OK;
+
+}
+
+int8_t gsmRegisterNetwork(void)
+{
+	int8_t resp = ERROR;
+
+	resp = gsmUpdateCREG();
+	if (resp != OK)
+		return ERROR;
+
+	if (gsmConf.creg_stat == REGISTERED ||
+			gsmConf.creg_stat == ROAMING) {
+		return OK;
+	}
+
+	return ERROR;
+}
+
 
 /*----- GSM SMS Interface -----*/
 
