@@ -234,7 +234,11 @@ static void btn_task(iptr_t timer) {
 	// Button pressed BTN_CHECK_SEC < t < BTN_CHECK_SEC+BTN_RESET_SEC
 	LED_NOTIFY_OFF();
 	ERR_OFF();
+
+	// Reset spoiled channels mask
 	controlFlags &= ~CF_SPOILED;
+	chSpoiled = 0x0000;
+
 	controlCalibration();
 
 }
