@@ -916,7 +916,7 @@ static void notifyCalibrationCompleted(void) {
 		len += sprintf(cmdBuff+len, "NON monitorato");
 	}
 
-	LOG_INFO("SMS: %s", msg);
+	LOG_INFO("Sending Notification\n%s\n\n", msg);
 
 	for (idx=0; idx<MAX_SMS_DEST; idx++) {
 		ee_getSmsDest(idx, dst, MAX_SMS_NUM);
