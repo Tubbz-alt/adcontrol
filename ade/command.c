@@ -85,17 +85,23 @@ MAKE_CMD(rst, "", "",
 //----- CMD: Test SMS commands from console
 MAKE_CMD(test_sms, "t", "",
 ({
- 	
-	//Silence "args not used" warning.
-	(void)args;
+ 	char *dst = args[1].s;
+	char *msg = dst;
 
-	LOG_INFO("\n\nSMS: %s\n\n", args[1].s);
+	// Lookup for DESTINATION end
+	for ( ; *msg != ' ' && *msg; ++msg);
+	if (*msg == '\0') {
+		LOG_INFO("\n\n.:: Test SMS\nSyntax Error\n%s\n\n", args[1].s);
+		RC_OK;
+	}
+	(*msg) = '\0';
+	msg++;
 
-	smsSplitAndParse("+393473153808", args[1].s);
+	LOG_INFO("\n\n.:: Test SMS\nFrom: %s\nText; %s\n\n", dst, msg);
+	smsSplitAndParse(dst, msg);
 
 	RC_OK;
 }), 0)
-
 
 /*******************************************************************************
  * Configuration Commands
