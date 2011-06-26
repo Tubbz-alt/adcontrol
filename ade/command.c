@@ -365,8 +365,10 @@ MAKE_CMD(rs, "", "s",
 		len += sprintf(cmdBuff+len, "GUAS");
 	} else if (controlIsCalibrating()) {
 		len += sprintf(cmdBuff+len, "CAL");
+	} else if (controlMonitoringEnabled()) {
+		len += sprintf(cmdBuff+len, "MON");
 	} else {
-		len += sprintf(cmdBuff+len, "NORM");
+		len += sprintf(cmdBuff+len, "DIS");
 	}
 
 	len += sprintf(cmdBuff+len, "\r\nCF");
