@@ -193,8 +193,7 @@ void smsSplitAndParse(char const *from, char *sms) {
 	if (cmdBuff[0] == '\0')
 		return;
 
-	LOG_INFO("Notifing [%s]...\r\n", msg.from);
-	GSM(gsmSMSSend(from, cmdBuff));
+	controlNotifyBySMS(from, cmdBuff);
 
 	// Wait for SMS being delivered
 	timer_delay(10000);
@@ -795,8 +794,7 @@ static void notifyLoss(uint8_t ch) {
 		if (dst[0] != '+')
 			continue;
 
-		LOG_INFO("Notifing [%s]...\r\n", dst);
-		GSM(gsmSMSSend(dst, msg));
+		controlNotifyBySMS(dst, msg);
 	}
 		
 	LOG_INFO("\n\n", dst);
@@ -862,8 +860,7 @@ static void notifyFault(void) {
 		if (dst[0] != '+')
 			continue;
 
-		LOG_INFO("Notifing [%s]...\r\n", dst);
-		GSM(gsmSMSSend(dst, msg));
+		controlNotifyBySMS(dst, msg);
 	}
 
 	LOG_INFO("\n\n");
@@ -928,8 +925,7 @@ static void notifyCalibrationCompleted(void) {
 		if (dst[0] != '+')
 			continue;
 
-		LOG_INFO("Notifing [%s]...\r\n", dst);
-		GSM(gsmSMSSend(dst, msg));
+		controlNotifyBySMS(dst, msg);
 	}
 
 	LOG_INFO("\n\n");
