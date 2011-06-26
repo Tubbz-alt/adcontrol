@@ -558,7 +558,7 @@ return OK;
 }
 int8_t gsmSMSSend(const char *number, const char *message)
 {
-	int8_t resp;
+	int8_t resp, i;
 	char buff[32];
 
 	gsmDebug("Sending SMS\n");
@@ -578,13 +578,15 @@ int8_t gsmSMSSend(const char *number, const char *message)
 
 	// Wait for modem message prompt
 	//_gsmRead(buff, 32);
-	for (uint8_t i=0; i<15; i++) {
+	for (i=0; i<15; i++) {
 		(*buff) = kfile_getc(&(gsm->fd));
 		if ((*buff) == EOF)
 			return -1;
 		if ((*buff) == '>')
 			break;
 	}
+	if (i == 15)
+		return -1;
 
 	// Sending message
 	_gsmWriteLine(message);
