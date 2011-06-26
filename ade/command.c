@@ -352,29 +352,18 @@ MAKE_CMD(rs, "", "s",
 	uint8_t pos = 0;
 	int len = 0;
 
-	len += sprintf(cmdBuff+len, "CA:");
-	mask = controlEnabled();
-	if (!mask)
-		len += sprintf(cmdBuff+len, " Nessuno");
-	for (pos = 1; mask && pos<=16; ++pos, mask>>=1) {
-		//LOG_INFO("CA: 0x%04X\n", mask);
-		if (mask & BV16(0)) {
-			len += sprintf(cmdBuff+len, " %d", pos);
-		}
+	len += sprintf(cmdBuff+len, "STATO ");
+	if (controlCriticalSpoiled()) {
+		len += sprintf(cmdBuff+len, "LAMP");
+	} else if (controlGetSpoiledMask()) {
+		len += sprintf(cmdBuff+len, "GUAS");
+	} else if (controlIsCalibrating()) {
+		len += sprintf(cmdBuff+len, "CAL");
+	} else {
+		len += sprintf(cmdBuff+len, "NORM");
 	}
 
-	len += sprintf(cmdBuff+len, "\r\nCC:");
-	mask = controlCritical();
-	if (!mask)
-		len += sprintf(cmdBuff+len, " Nessuno");
-	for (pos = 1; mask && pos <= 16; ++pos, mask>>=1) {
-		//LOG_INFO("CC: 0x%04X\n", mask);
-		if (mask & BV(0)) {
-			len += sprintf(cmdBuff+len, " %d", pos);
-		}
-	}
-
-	len += sprintf(cmdBuff+len, "\r\nCF:");
+	len += sprintf(cmdBuff+len, "\r\nCF");
 	mask = controlGetSpoiledMask();
 	if (!mask)
 		len += sprintf(cmdBuff+len, " Nessuno");
@@ -385,7 +374,7 @@ MAKE_CMD(rs, "", "s",
 		}
 	}
 
-	len += sprintf(cmdBuff+len, "\r\nGSM: %d (", csq);
+	len += sprintf(cmdBuff+len, "\r\nGSM %d (", csq);
 	if (csq == 0 || csq == 99)
 		len += sprintf(cmdBuff+len, "Scarso)");
 	else if (csq<=4)
@@ -395,14 +384,33 @@ MAKE_CMD(rs, "", "s",
 	else
 		len += sprintf(cmdBuff+len, "Ottimo)");
 
-	len += sprintf(cmdBuff+len, "\r\nAUX: ");
-	if (controlCriticalSpoiled()) {
-		len += sprintf(cmdBuff+len, "LAMP");
-	} else {
-		len += sprintf(cmdBuff+len, "NORM");
+
+	len += sprintf(cmdBuff+len, "\r\nCA");
+	mask = controlEnabled();
+	if (!mask)
+		len += sprintf(cmdBuff+len, " Nessuno");
+	for (pos = 1; mask && pos<=16; ++pos, mask>>=1) {
+		//LOG_INFO("CA: 0x%04X\n", mask);
+		if (mask & BV16(0)) {
+			len += sprintf(cmdBuff+len, " %d", pos);
+		}
 	}
 
-	LOG_INFO("\n\nStato RFN:\n%s\n\n", cmdBuff);
+	len += sprintf(cmdBuff+len, "\r\nCC");
+	mask = controlCritical();
+	if (!mask)
+		len += sprintf(cmdBuff+len, " Nessuno");
+	for (pos = 1; mask && pos <= 16; ++pos, mask>>=1) {
+		//LOG_INFO("CC: 0x%04X\n", mask);
+		if (mask & BV16(0)) {
+			len += sprintf(cmdBuff+len, " %d", pos);
+		}
+	}
+
+	LOG_INFO("\n\n##### Report Stato RFN #####\n"
+			"%s\n"
+			"#############################\n\n",
+			cmdBuff);
 	args[1].s = cmdBuff;
 
 	RC_OK;

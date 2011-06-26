@@ -105,6 +105,15 @@ inline uint16_t controlEnabled(void) {
 	return chEnabled;
 }
 
+extern uint16_t chCalib;
+inline uint8_t controlIsCalibrating(void);
+inline uint8_t controlIsCalibrating(void) {
+	if (chCalib & chEnabled)
+		return 1;
+	return 0;
+}
+
+
 extern uint16_t chCritical;
 inline void controlSetCritical(uint16_t mask);
 inline void controlSetCritical(uint16_t mask) {
