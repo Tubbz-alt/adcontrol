@@ -98,6 +98,58 @@ static void updateCSQ(void) {
 
 	// TODO if not network attached: force network scanning and attaching
 }
+
+int8_t controlNotifyBySMS(const char *dest, const char *buff) { 
+	int8_t result;
+	uint8_t try;
+	uint8_t timeout;
+
+	LOG_INFO("Notify by SMS\nDest: %s\nText: %s\r\n", dest, buff);
+
+	// Checking for Network availability
+	try = 0; timeout = 10;
+	result = gsmRegisterNetwork();
+	while (result != OK) {
+		LOG_WARN("Network not available\r\n");
+		if (try % timeout) {
+			LOG_WARN("Trying again in 60s\r\n");
+			timer_delay(60000);
+		} else {
+			// Resetting modem once every (10*timeout) mins
+			gsmPowerOn();
+			timeout += 10;
+			if (timeout >= 250)
+				timeout = 10;
+		}
+		result = gsmRegisterNetwork();
+		try++;
+	}
+	
+	// Checking for signal quality
+	try = 0; timeout = 20;
+	result = gsmUpdateCSQ();
+	while (result != OK ||
+			gsmCSQ() == 99 || gsmCSQ() == 0) {
+		LOG_WARN("Low network signal [%d]\r\n", gsmCSQ());
+		if (try % timeout) {
+			LOG_WARN("Trying again in 60s\r\n");
+			timer_delay(60000);
+		} else {
+			// Resetting modem once every (20*timeout) mins
+			gsmPowerOn();
+			timeout += 20;
+			if (timeout >= 240)
+				timeout = 20;
+		}
+		result = gsmRegisterNetwork();
+		try++;
+	}
+	
+	// Trying to send the SMS
+	result = 0;
+	GSM(result = gsmSMSSend(dest, buff));
+	return result;
+}
 void smsSplitAndParse(char const *from, char *sms) {
 	char *cmd = sms;
 	char *cmdEnd = sms;

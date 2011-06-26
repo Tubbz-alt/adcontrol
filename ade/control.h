@@ -128,6 +128,8 @@ void controlNotifySpoiled(void);
 
 void smsSplitAndParse(char const *from, char *sms);
 
+int8_t controlNotifyBySMS(const char *dest, const char *buff);
+
 #if CONFIG_CONTROL_TESTING 
 void NORETURN chsTesting(void);
 #else
