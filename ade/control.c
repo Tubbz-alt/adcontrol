@@ -735,10 +735,15 @@ static inline uint8_t isCritical(uint8_t ch) {
 	return (chCritical & BV16(ch));
 }
 
-void controlSetSpoiled(void) {
+void controlNotifySpoiled(void) {
 	// Light-up Fault LED (and switch the Relè)
 	ERR_ON();
 	controlFlags |= CF_SPOILED;
+}
+
+inline void controlSetSpoiled(uint8_t ch);
+inline void controlSetSpoiled(uint8_t ch) {
+	chSpoiled |= BV16(ch);
 }
 
 /** @brief Defines the monitoring policy for each channel */
@@ -747,8 +752,14 @@ static void monitor(uint8_t ch) {
 	if (!chLoadLoss(ch))
 		return;
 
-	if (isCritical(ch))
-		controlSetSpoiled();
+	// Mark the channel as spoiled
+	controlSetSpoiled(ch);
+
+	// Notify if a CRITICAL channel is spoiled
+	LOG_INFO("Crit: 0x%04X, ch: %d\r\n", chCritical, ch);
+	if (chCritical & BV16(ch)) { //isCritical(ch)) {
+		controlNotifySpoiled();
+	}
 
 	// Fault detected
 	rmode = FAULT;

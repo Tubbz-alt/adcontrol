@@ -124,7 +124,7 @@ inline uint16_t controlCritical(void) {
 	return chCritical;
 }
 
-void controlSetSpoiled(void);
+void controlNotifySpoiled(void);
 
 void smsSplitAndParse(char const *from, char *sms);
 

@@ -339,7 +339,7 @@ MAKE_CMD(fl, "", "",
 	//Silence "args not used" warning.
 	(void)args;
 	LOG_INFO("\n\n<= Lampeggio Forzato\n\n");
-	controlSetSpoiled();
+	controlNotifySpoiled();
 	RC_OK;
 }), 0)
 ;
