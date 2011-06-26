@@ -155,7 +155,7 @@ static void sms_task(iptr_t timer) {
 	(void)timer;
 	int8_t smsIndex = 0;
 
-	DB(LOG_INFO("Checking for SMS commands...\r\n"));
+	DB(LOG_INFO("\r\nChecking SMS...\r\n"));
 
 	// Update signal level
 	GSM(updateCSQ());
@@ -959,12 +959,12 @@ void controlLoop(void) {
 	if (ch==MAX_CHANNELS) {
 		// No channels enabled... avoid calibration/monitoring
 		if (chCalib) {
-			DB(LOG_INFO("Idle (%s, Crit: 0x%04X, Cal: 0x%04X) %c\r",
+			DB(LOG_INFO("Idle (%s, Fault: 0x%04X, Cal: 0x%04X) %c\r",
 						controlMonitoringEnabled() ? "Mon" : "Dis",
 						chSpoiled,
 						chCalib, progress[i++%4]));
 		} else {
-			DB(LOG_INFO("Idle (%s, Crit: 0x%04X) %c\r",
+			DB(LOG_INFO("Idle (%s, Fault: 0x%04X) %c\r",
 						controlMonitoringEnabled() ? "Mon" : "Dis",
 						chSpoiled,
 						progress[i++%4]));
@@ -983,7 +983,7 @@ void controlLoop(void) {
 			return;
 
 		// Notify calibration completion
-		LOG_INFO("CALIBRATION COMPLETED\r\n\n");
+		LOG_INFO("\n\nCALIBRATION COMPLETED\r\n\n");
 		LED_ON();
 		notifyCalibrationCompleted();
 		return;
