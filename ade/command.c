@@ -97,7 +97,7 @@ MAKE_CMD(test_sms, "t", "",
 	(*msg) = '\0';
 	msg++;
 
-	LOG_INFO("\n\n.:: Test SMS\nFrom: %s\nText; %s\n\n", dst, msg);
+	LOG_INFO("\n\n.:: Test SMS\nFrom: %s\nText: %s\n\n", dst, msg);
 	smsSplitAndParse(dst, msg);
 
 	RC_OK;
@@ -232,7 +232,7 @@ MAKE_CMD(aa, "t", "",
 ({
 	uint16_t eCh, nCh;
 
-	LOG_INFO("\n\n<= Aggiungi abilitati: %s\r\n\n", args[1].s);
+	LOG_INFO("\n\n<= Aggiungi abilitati [%s]\r\n\n", args[1].s);
 
 	nCh = getChannelsMask(args[1].s);
 	if (nCh) {
@@ -253,7 +253,7 @@ MAKE_CMD(ra, "t", "",
 ({
 	uint16_t eCh, nCh;
 
-	LOG_INFO("\n\n<= Rimuovi abilitati: %s\r\n\n", args[1].s);
+	LOG_INFO("\n\n<= Rimuovi abilitati [%s]\r\n\n", args[1].s);
 
 	nCh = getChannelsMask(args[1].s);
 	if (nCh) {
@@ -274,7 +274,7 @@ MAKE_CMD(ac, "t", "",
 ({
 	uint16_t cCh, nCh;
 
-	LOG_INFO("\n\n<= Aggiungi critici: %s\r\n\n", args[1].s);
+	LOG_INFO("\n\n<= Aggiungi critici [%s]\r\n\n", args[1].s);
 
 	nCh = getChannelsMask(args[1].s);
 	if (nCh) {
@@ -295,7 +295,7 @@ MAKE_CMD(rc, "t", "",
 ({
 	uint16_t cCh, nCh;
 
-	LOG_INFO("\n\n<= Rimuovi critici: %s\r\n\n", args[1].s);
+	LOG_INFO("\n\n<= Rimuovi critici [%s]\r\n\n", args[1].s);
 
 	nCh = getChannelsMask(args[1].s);
 	if (nCh) {
