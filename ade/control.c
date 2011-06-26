@@ -703,6 +703,12 @@ static inline uint8_t chLoadLoss(uint8_t ch) {
 }
 #endif
 
+static inline uint8_t isCritical(uint8_t ch) {
+	if (chCritical & BV16(ch))
+		return 1;
+	return 0;
+}
+
 static void notifyLoss(uint8_t ch) {
 	char dst[MAX_SMS_NUM];
 	char *msg = cmdBuff;
@@ -729,10 +735,6 @@ static void notifyLoss(uint8_t ch) {
 
 	// Wait for SMS being delivered
 	timer_delay(10000);
-}
-
-static inline uint8_t isCritical(uint8_t ch) {
-	return (chCritical & BV16(ch));
 }
 
 void controlNotifySpoiled(void) {
