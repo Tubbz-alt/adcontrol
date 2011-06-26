@@ -717,8 +717,20 @@ static void notifyLoss(uint8_t ch) {
 
 	// Format SMS message
 	len = ee_getSmsText(msg, MAX_MSG_TEXT);
-	sprintf(msg+len, " - Perdita carico CH[%hd]\r\n", ch+1);
-	LOG_INFO("SMS: %s", msg);
+
+	len += sprintf(msg+len, "\r\nAnomalia: CH%s(%hd)\r\nSemaforo: ",
+			isCritical(ch) ? " CRITICO" : "",
+			ch+1);
+	if (controlCriticalSpoiled()) {
+		len += sprintf(cmdBuff+len, "in LAMPEGGIO");
+	} else if (controlGetSpoiledMask()) {
+		len += sprintf(cmdBuff+len, "GUASTO");
+	} else {
+		// This should never happens
+		len += sprintf(cmdBuff+len, "RFN FAULT?");
+	}
+
+	LOG_INFO("\r\nSMS:\r\n%s\r\n\n", msg);
 
 	for (idx=0; idx<MAX_SMS_DEST; idx++) {
 		ee_getSmsDest(idx, dst, MAX_SMS_NUM);
@@ -784,7 +796,7 @@ static void notifyFault(void) {
 
 	// Format SMS message
 	len = ee_getSmsText(msg, MAX_MSG_TEXT);
-	sprintf(msg+len, " - Errore centralina\r\n");
+	sprintf(msg+len, "\r\nAnomalia centralina RCT\r\n");
 	LOG_INFO("SMS: %s", msg);
 
 	for (idx=0; idx<MAX_SMS_DEST; idx++) {
