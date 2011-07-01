@@ -446,7 +446,7 @@ static int8_t _gsmReadResult()
 
 /*----- GSM Interface -----*/
 
-static uint8_t gsmUpdateCREG(void)
+uint8_t gsmUpdateCREG(void)
 {
 	int8_t resp;
 	char buff[16];
@@ -465,6 +465,31 @@ static uint8_t gsmUpdateCREG(void)
 
 	return OK;
 
+}
+
+uint8_t gsmRegistered(void) {
+
+	if (gsmUpdateCREG() != OK)
+		return 0;
+
+	switch(gsmCREG()) {
+	case 1:
+		// 1 registered, home network
+	case 2:
+		// 2 not registered, but MT is currently searching a new
+		//   operator to register to
+	case 5:
+		// 5 registered, roaming
+		return 1;
+	default:
+		// 0 not registered, MT is not currently searching a new
+		//   operator to register to
+		// 3 registration denied
+		// 4 unknown
+		return 0;
+	}
+
+	return 0;
 }
 
 int8_t gsmRegisterNetwork(void)

@@ -167,6 +167,9 @@ int8_t gsmGetNetworkParameters(void);
 /*----- GSM Status Interface -----*/
 #define gsmCSQ() gsmConf.rssi
 uint8_t gsmUpdateCSQ(void);
+#define gsmCREG() gsmConf.creg_stat
+uint8_t gsmUpdateCREG(void);
+uint8_t gsmRegistered(void);
 int8_t gsmRegisterNetwork(void);
 
 /*----- GSM SMS Interface -----*/
