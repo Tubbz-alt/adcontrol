@@ -175,6 +175,25 @@ MAKE_CMD(li, "", "s",
 }), 0)
 ;
 
+static uint8_t parseChannelNumber(char const *buff);
+static uint8_t parseChannelNumber(char const *buff) {
+	char *c = buff;
+	uint8_t ch = 0;
+
+	for ( ; (*c != ' ' && *c != ';' && *c); ++c) {
+		// Abort on un-expected input
+		if ((*c < '0') || (*c > '9')) {
+			return 0;
+		}
+		// Otherwise: update the current channel
+		ch *= 10;
+		ch += (*c-'0');
+	}
+
+	return ch;
+}
+
+
 /**
  * @brief Return the channel mask corresponding to the input string
  *
@@ -360,6 +379,34 @@ MAKE_CMD(fl, "", "",
 }), 0)
 ;
 
+//----- CMD: SHOW CHANNEL STATUS
+MAKE_CMD(sc, "s", "s",
+({
+	uint8_t ch;
+	int len = 0;
+
+	LOG_INFO("\n\n<= Stato canale [%s]\r\n\n", args[1].s);
+
+	ch = parseChannelNumber(args[1].s);
+	if (ch == 0)
+		return RC_ERROR;
+#if 0
+	len += sprintf(cmdBuff+len, "\r\nStato CH%s(%d):",
+			isCritical(ch) ? " CRITICO" : "", ch+1);
+	len += sprintf(cmdBuff+len, "\r\nImax: %08ld, Irms: %08ld",
+		chData[ch].Imax, chData[ch].Irms);
+
+	LOG_INFO("\n\n##### Report Stato CH #######\n"
+			"%s\n"
+			"#############################\n\n",
+			cmdBuff);
+	args[1].s = cmdBuff;
+#endif
+
+	RC_OK;
+}), 0)
+;
+
 //----- CMD: STATUS
 MAKE_CMD(rs, "", "s",
 ({
@@ -461,6 +508,7 @@ void command_init(void) {
 	REGISTER_CMD(fc);
 	REGISTER_CMD(am);
 	REGISTER_CMD(dm);
+	REGISTER_CMD(sc);
 	REGISTER_CMD(rs);
 	REGISTER_CMD(fl);
 	REGISTER_CMD(rst);
