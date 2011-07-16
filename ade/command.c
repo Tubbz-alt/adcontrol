@@ -424,7 +424,7 @@ MAKE_CMD(rs, "", "s",
 	} else if (controlIsCalibrating()) {
 		len += sprintf(cmdBuff+len, "CAL");
 	} else if (controlMonitoringEnabled()) {
-		len += sprintf(cmdBuff+len, "MON");
+		len += sprintf(cmdBuff+len, "OK");
 	} else {
 		len += sprintf(cmdBuff+len, "DIS");
 	}
