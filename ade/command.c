@@ -137,7 +137,7 @@ MAKE_CMD(vn, "", "s",
 		ee_getSmsDest(i, buff, MAX_SMS_NUM);
 
 		len = strlen(cmdBuff);
-		sprintf(cmdBuff+len, "%d) %s; ", i, buff);
+		sprintf(cmdBuff+len, "\n%d) %s;", i, buff);
 
 		timer_delay(5);
 	}
