@@ -84,17 +84,26 @@ gsmSMSMessage_t msg;
 static void updateCSQ(void) {
 	uint8_t csq;
 
+	// Checking for network availability
+	if (!gsmRegistered()) {
+		// Forcing GMS reset
+		LED_GSM_OFF();
+		gsmPowerOn();
+	}
+
+	// Update the signal level
 	gsmUpdateCSQ();
 	csq = gsmCSQ();
 	DB(LOG_INFO("GSM CSQ [%hu]\r\n", csq));
-	if (csq==99 || csq<3) {
-		csq = 0;
+	if (csq == 99) {
+		LED_GSM_OFF();
 	} else {
+		csq = 0;
 		if (csq>2) csq = 1;
 		if (csq>8) csq = 2;
 		if (csq>16) csq = 3;
+		LED_GSM_CSQ(csq);
 	}
-	LED_GSM_CSQ(csq);
 
 	// TODO if not network attached: force network scanning and attaching
 }
