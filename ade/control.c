@@ -853,7 +853,7 @@ static void notifyFault(void) {
 
 	// Format SMS message
 	len = ee_getSmsText(msg, MAX_MSG_TEXT);
-	sprintf(msg+len, "\r\nAnomalia centralina RCT\r\n");
+	sprintf(msg+len, "\r\nGuasto centralina RCT\r\n");
 	LOG_INFO("SMS: %s", msg);
 
 	for (idx=0; idx<MAX_SMS_DEST; idx++) {
