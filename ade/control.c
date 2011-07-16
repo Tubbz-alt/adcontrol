@@ -787,6 +787,8 @@ static void notifyLoss(uint8_t ch) {
 		// This should never happens
 		len += sprintf(cmdBuff+len, "RFN FAULT?");
 	}
+	len += sprintf(msg+len, "\r\n%08ld => %08ld\r\n",
+			chData[ch].Imax, chData[ch].Irms);
 
 	LOG_INFO("\r\nSMS:\r\n%s\r\n\n", msg);
 
