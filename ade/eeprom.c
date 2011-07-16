@@ -23,6 +23,7 @@ eeprom_conf_t EEMEM eeconf = {
 			"EEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBE\0",
 	.enabledChannelsMask = 0x0000,
 	.criticalChannelsMask = 0x0000,
+	.gsm_configured = 0x00,
 };
 
 //static int8_t ee_setBytes(uint8_t *eep, const uint8_t *buf, uint8_t size) {
@@ -127,6 +128,17 @@ void ee_setCriticalChMask(uint16_t chMask) {
 int16_t ee_getCriticalChMask(void) {
 	return eeprom_read_word(
 			(uint16_t*)&eeconf.criticalChannelsMask);
+}
+
+
+void ee_setGSMConfigured(uint8_t isConf) {
+	eeprom_update_byte(
+			(uint8_t*)&eeconf.gsm_configured, isConf);
+}
+
+uint8_t ee_getGSMConfigured(void) {
+	return eeprom_read_byte(
+			(uint8_t*)&eeconf.gsm_configured);
 }
 
 void ee_dumpConf(void) {

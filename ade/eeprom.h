@@ -20,6 +20,8 @@ typedef struct eeprom_conf {
 	/** A bitmask of CRITICAL input channel which should generate
 	 * an EXT alarm (by switching the Relé) */
 	uint16_t criticalChannelsMask;
+	/** Set 1 if the GSM has been configured*/
+	uint8_t gsm_configured;
 } eeprom_conf_t;
 
 int8_t  ee_getSmsDest(uint8_t pos, char *num, uint8_t count);
@@ -30,6 +32,9 @@ int16_t ee_getEnabledChMask(void);
 void    ee_setEnabledChMask(uint16_t chMask);
 int16_t ee_getCriticalChMask(void);
 void    ee_setCriticalChMask(uint16_t chMask);
+
+void    ee_setGSMConfigured(uint8_t isConf);
+uint8_t ee_getGSMConfigured(void);
 
 void ee_dumpConf(void);
 
