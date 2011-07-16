@@ -837,11 +837,11 @@ static void monitor(uint8_t ch) {
 	kprintf("WARN: Load loss on CH[%hd] (%08ld => %08ld)\r\n",
 		ch+1, chData[ch].Imax, chData[ch].Irms);
 
-	// Mark channel for recalibration
-	chRecalibrate(ch);
-
 	// Send SMS notification
 	notifyLoss(ch);
+
+	// Mark channel for recalibration
+	chRecalibrate(ch);
 
 }
 
