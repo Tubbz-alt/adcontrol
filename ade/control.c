@@ -889,7 +889,7 @@ static void buttonHandler(void) {
 static void checkSignals(void) {
 	// Check for UNIT IRQ
 	if (signal_pending(SIGNAL_UNIT_IRQ) &&
-			!signal_status(SIGNAL_UNIT_IRQ)) {
+			signal_status(SIGNAL_UNIT_IRQ)) {
 		// Notify only on transitionn to LOW value
 		notifyFault();
 	}
