@@ -3,6 +3,7 @@
 #include "control.h"
 #include "eeprom.h"
 #include "gsm.h"
+#include "signals.h"
 
 #include "cmd_ctor.h"  // MAKE_CMD, REGISTER_CMD
 #include "verstag.h"
@@ -370,7 +371,8 @@ MAKE_CMD(rs, "", "s",
 	len += sprintf(cmdBuff+len, "STATO ");
 	if (controlCriticalSpoiled()) {
 		len += sprintf(cmdBuff+len, "LAMP");
-	} else if (controlGetSpoiledMask()) {
+	} else if (controlGetSpoiledMask() ||
+				signal_status(SIGNAL_UNIT_IRQ)) {
 		len += sprintf(cmdBuff+len, "GUAS");
 	} else if (controlIsCalibrating()) {
 		len += sprintf(cmdBuff+len, "CAL");
