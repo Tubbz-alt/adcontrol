@@ -211,6 +211,9 @@ static void sms_task(iptr_t timer) {
 	// Update signal level
 	GSM(updateCSQ());
 
+	// Flush SMS buffer
+	GSM(gsmBufferCleanup(&msg));
+
 	// Retrive the first SMS into memory
 	GSM(smsIndex = gsmSMSByIndex(&msg, 1));
 	if (smsIndex==1) {
