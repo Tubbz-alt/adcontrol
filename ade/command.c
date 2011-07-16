@@ -31,8 +31,8 @@ char cmdBuff[161];
  */
 MAKE_CMD(ver, "", "s",
 ({
-	LOG_INFO("\n\nF/W Ver: %s\n\n", args[1].s);
 	args[1].s = vers_tag;
+	LOG_INFO("\n\nF/W Ver: %s\n\n", args[1].s);
 	RC_OK;
 }), 0);
 
