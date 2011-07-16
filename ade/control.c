@@ -87,7 +87,11 @@ static void updateCSQ(void) {
 	gsmUpdateCSQ();
 	csq = gsmCSQ();
 	DB(LOG_INFO("GSM CSQ [%hu]\r\n", csq));
-	if (csq==99 || csq<3) {
+	if (csq==99) {
+		// Forcing GMS reset
+		LED_GSM_OFF();
+		gsmPowerOn();
+	} else if (	csq<3) {
 		csq = 0;
 	} else {
 		if (csq>2) csq = 1;
@@ -210,6 +214,9 @@ static void sms_task(iptr_t timer) {
 
 	// Update signal level
 	GSM(updateCSQ());
+
+	// Flush SMS buffer
+	gsmBufferCleanup(&msg);
 
 	// Retrive the first SMS into memory
 	GSM(smsIndex = gsmSMSByIndex(&msg, 1));
@@ -774,8 +781,7 @@ static void notifyLoss(uint8_t ch) {
 	len = ee_getSmsText(msg, MAX_MSG_TEXT);
 
 	len += sprintf(msg+len, "\r\nAnomalia: CH%s(%hd)\r\nSemaforo: ",
-			isCritical(ch) ? " CRITICO" : "",
-			ch+1);
+			isCritical(ch) ? " CRITICO" : "", ch+1);
 	if (controlCriticalSpoiled()) {
 		len += sprintf(cmdBuff+len, "in LAMPEGGIO");
 	} else if (controlGetSpoiledMask()) {
@@ -784,6 +790,8 @@ static void notifyLoss(uint8_t ch) {
 		// This should never happens
 		len += sprintf(cmdBuff+len, "RFN FAULT?");
 	}
+	len += sprintf(msg+len, "\r\n%08ld => %08ld\r\n",
+			chData[ch].Imax, chData[ch].Irms);
 
 	LOG_INFO("\r\nSMS:\r\n%s\r\n\n", msg);
 
@@ -834,11 +842,11 @@ static void monitor(uint8_t ch) {
 	kprintf("WARN: Load loss on CH[%hd] (%08ld => %08ld)\r\n",
 		ch+1, chData[ch].Imax, chData[ch].Irms);
 
-	// Mark channel for recalibration
-	chRecalibrate(ch);
-
 	// Send SMS notification
 	notifyLoss(ch);
+
+	// Mark channel for recalibration
+	chRecalibrate(ch);
 
 }
 
@@ -850,7 +858,7 @@ static void notifyFault(void) {
 
 	// Format SMS message
 	len = ee_getSmsText(msg, MAX_MSG_TEXT);
-	sprintf(msg+len, "\r\nAnomalia centralina RCT\r\n");
+	sprintf(msg+len, "\r\nGuasto centralina RCT\r\n");
 	LOG_INFO("SMS: %s", msg);
 
 	for (idx=0; idx<MAX_SMS_DEST; idx++) {
@@ -886,7 +894,7 @@ static void buttonHandler(void) {
 static void checkSignals(void) {
 	// Check for UNIT IRQ
 	if (signal_pending(SIGNAL_UNIT_IRQ) &&
-			!signal_status(SIGNAL_UNIT_IRQ)) {
+			signal_status(SIGNAL_UNIT_IRQ)) {
 		// Notify only on transitionn to LOW value
 		notifyFault();
 	}

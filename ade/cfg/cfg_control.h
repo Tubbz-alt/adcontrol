@@ -64,7 +64,7 @@
  *
  * $WIZ$ type = "boolean"
  */
-#define CONFIG_FAULT_SAMPLES 8
+#define CONFIG_FAULT_SAMPLES 250
 
 
 /**

@@ -3,6 +3,7 @@
 #include "control.h"
 #include "eeprom.h"
 #include "gsm.h"
+#include "signals.h"
 
 #include "cmd_ctor.h"  // MAKE_CMD, REGISTER_CMD
 #include "verstag.h"
@@ -137,7 +138,7 @@ MAKE_CMD(vn, "", "s",
 		ee_getSmsDest(i, buff, MAX_SMS_NUM);
 
 		len = strlen(cmdBuff);
-		sprintf(cmdBuff+len, "%d) %s; ", i, buff);
+		sprintf(cmdBuff+len, "\n%d) %s;", i, buff);
 
 		timer_delay(5);
 	}
@@ -173,6 +174,25 @@ MAKE_CMD(li, "", "s",
 	RC_OK;
 }), 0)
 ;
+
+static uint8_t parseChannelNumber(char const *buff);
+static uint8_t parseChannelNumber(char const *buff) {
+	char *c = buff;
+	uint8_t ch = 0;
+
+	for ( ; (*c != ' ' && *c != ';' && *c); ++c) {
+		// Abort on un-expected input
+		if ((*c < '0') || (*c > '9')) {
+			return 0;
+		}
+		// Otherwise: update the current channel
+		ch *= 10;
+		ch += (*c-'0');
+	}
+
+	return ch;
+}
+
 
 /**
  * @brief Return the channel mask corresponding to the input string
@@ -359,6 +379,34 @@ MAKE_CMD(fl, "", "",
 }), 0)
 ;
 
+//----- CMD: SHOW CHANNEL STATUS
+MAKE_CMD(sc, "s", "s",
+({
+	uint8_t ch;
+	int len = 0;
+
+	LOG_INFO("\n\n<= Stato canale [%s]\r\n\n", args[1].s);
+
+	ch = parseChannelNumber(args[1].s);
+	if (ch == 0)
+		return RC_ERROR;
+#if 0
+	len += sprintf(cmdBuff+len, "\r\nStato CH%s(%d):",
+			isCritical(ch) ? " CRITICO" : "", ch+1);
+	len += sprintf(cmdBuff+len, "\r\nImax: %08ld, Irms: %08ld",
+		chData[ch].Imax, chData[ch].Irms);
+
+	LOG_INFO("\n\n##### Report Stato CH #######\n"
+			"%s\n"
+			"#############################\n\n",
+			cmdBuff);
+	args[1].s = cmdBuff;
+#endif
+
+	RC_OK;
+}), 0)
+;
+
 //----- CMD: STATUS
 MAKE_CMD(rs, "", "s",
 ({
@@ -370,7 +418,8 @@ MAKE_CMD(rs, "", "s",
 	len += sprintf(cmdBuff+len, "STATO ");
 	if (controlCriticalSpoiled()) {
 		len += sprintf(cmdBuff+len, "LAMP");
-	} else if (controlGetSpoiledMask()) {
+	} else if (controlGetSpoiledMask() ||
+				signal_status(SIGNAL_UNIT_IRQ)) {
 		len += sprintf(cmdBuff+len, "GUAS");
 	} else if (controlIsCalibrating()) {
 		len += sprintf(cmdBuff+len, "CAL");
@@ -459,6 +508,7 @@ void command_init(void) {
 	REGISTER_CMD(fc);
 	REGISTER_CMD(am);
 	REGISTER_CMD(dm);
+	REGISTER_CMD(sc);
 	REGISTER_CMD(rs);
 	REGISTER_CMD(fl);
 	REGISTER_CMD(rst);
