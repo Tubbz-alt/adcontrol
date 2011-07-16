@@ -177,6 +177,20 @@ static int8_t gsmConfigure(void)
 		return resp;
 	}
 
+	// Set fixed autobaud @115200bps
+	_gsmWriteLine("AT+IPR=115200");
+	resp = _gsmReadResult();
+	if (resp != OK) {
+		return resp;
+	}
+
+	// Saving GSM configuration
+	_gsmWriteLine("AT&W");
+	resp = _gsmReadResult();
+	if (resp != OK) {
+		return resp;
+	}
+
 	return OK;
 }
 
@@ -207,15 +221,29 @@ int8_t gsmPowerOn(void)
 
 	// When DCE powers on with the autobauding enabled, it is recommended
 	// to wait 2 to 3 seconds before sending the first AT character.
-	LOG_INFO("Wait (20s) for network attachment\n");
-	timer_delay(20000);
+	LOG_INFO("Wait (30s) for network attachment\n");
+	timer_delay(30000);
 
+	if (ee_getGSMConfigured()) {
+		LOG_INFO("GSM already configured @115200bps\n");
+		return;
+	}
+
+	LOG_INFO("GSM not yet configured: AUTOBAUDING...\n");
 	result = gsmAutobaud();
 	if (result != OK)
 		return result;
 
+	LOG_INFO("GSM not yet configured: CONFIGURING...\n");
 	result = gsmConfigure();
+	if (result != OK)
+		return result;
+
+	LOG_INFO("Mask GSM as configured\n");
+	ee_setGSMConfigured(1);
+
 	return result;
+
 }
 
 void gsmPowerOff(void)
