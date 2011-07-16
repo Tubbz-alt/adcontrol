@@ -9,6 +9,8 @@
 #include <io/kfile.h>
 #include <drv/ser.h>
 
+#include <string.h> // memset
+
 #include "cfg/cfg_gsm.h"
 
 /* Network Params */
@@ -137,6 +139,15 @@ typedef struct gsmSMSMessage {
 	char time[21];
 	char text[161];
 } gsmSMSMessage_t;
+
+inline void gsmBufferCleanup(gsmSMSMessage_t *msg);
+inline void gsmBufferCleanup(gsmSMSMessage_t *msg) {
+	if (msg->from[0]) {
+		memset(msg->from, 0, 16);
+		memset(msg->time, 0, 21);
+		memset(msg->text, 0, 161);
+	}
+}
 
 #if CONFIG_GSM_TESTING
 void gsmTesting(Serial *port);
