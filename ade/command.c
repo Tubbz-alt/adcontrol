@@ -484,6 +484,40 @@ MAKE_CMD(rs, "", "s",
 ;
 
 
+/*******************************************************************************
+ * System Management Commands
+ ******************************************************************************/
+
+//----- CMD: GSM Power On
+MAKE_CMD(gsm_on, "", "",
+({
+	(void)args;
+	LOG_INFO("\n\n<= Accensione GSM\r\n\n");
+	gsmPowerOn();
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: GSM Power Off
+MAKE_CMD(gsm_off, "", "",
+({
+	(void)args;
+	LOG_INFO("\n\n<= Spegnimento GSM\r\n\n");
+	gsmPowerOff();
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: GSM Reset
+MAKE_CMD(gsm_reset, "", "",
+({
+	(void)args;
+	LOG_INFO("\n\n<= Reset GSM\r\n\n");
+	gsmReset();
+	RC_OK;
+}), 0)
+;
+
 /* Register commands.  */
 void command_init(void) {
 
@@ -513,8 +547,11 @@ void command_init(void) {
 	REGISTER_CMD(fl);
 	REGISTER_CMD(rst);
 
-//----- Test commands
+//----- System Management commands
 	REGISTER_CMD(test_sms);
+	REGISTER_CMD(gsm_on);
+	REGISTER_CMD(gsm_off);
+	REGISTER_CMD(gsm_reset);
 }
 
 /**
