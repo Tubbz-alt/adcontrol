@@ -518,6 +518,18 @@ MAKE_CMD(gsm_reset, "", "",
 }), 0)
 ;
 
+//----- CMD: GSM Reconf
+MAKE_CMD(gsm_conf, "", "",
+({
+	(void)args;
+	LOG_INFO("\n\n<= Re-Configuring GSM\r\n\n");
+	ee_setGSMConfigured(0);
+	gsmPowerOn();
+	RC_OK;
+}), 0)
+;
+
+
 /* Register commands.  */
 void command_init(void) {
 
@@ -551,6 +563,7 @@ void command_init(void) {
 	REGISTER_CMD(test_sms);
 	REGISTER_CMD(gsm_on);
 	REGISTER_CMD(gsm_off);
+	REGISTER_CMD(gsm_conf);
 	REGISTER_CMD(gsm_reset);
 }
 
