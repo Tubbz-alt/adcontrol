@@ -82,7 +82,7 @@ gsmSMSMessage_t msg;
 
 // Update the CSQ signal level indicator
 static void updateCSQ(void) {
-	uint8_t csq;
+	uint8_t csq, level;
 
 	// Checking for network availability
 	if (!gsmRegistered()) {
@@ -98,11 +98,14 @@ static void updateCSQ(void) {
 	if (csq == 99) {
 		LED_GSM_OFF();
 	} else {
-		csq = 0;
-		if (csq>2) csq = 1;
-		if (csq>8) csq = 2;
-		if (csq>16) csq = 3;
-		LED_GSM_CSQ(csq);
+		level = 0;
+		if (csq > 2)
+			level = 1;
+		if (csq > 16)
+			level = 2;
+		if (csq > 24)
+			level = 3;
+		LED_GSM_CSQ(level);
 	}
 
 	// TODO if not network attached: force network scanning and attaching
