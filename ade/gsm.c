@@ -23,6 +23,7 @@
 #include "gsm.h"
 
 #include "hw/hw_gsm.h"
+#include "hw/hw_led.h"
 
 #include <cfg/compiler.h>
 
@@ -221,6 +222,7 @@ void gsmPowerOff(void)
 {
 	LOG_INFO("GSM: Powering-off...\n");
 	gsm_powerOff();
+	LED_GSM_OFF();
 }
 
 
