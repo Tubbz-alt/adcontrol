@@ -186,7 +186,7 @@ int8_t gsmPowerOn(void)
 
 	// TODO: check if the modem is already on
 	// either using the STATUS line or by sending an AT command
-	if (gsm_statusIn()) {
+	if (gsm_status()) {
 #if 0
 		// Modem already ON... checking AT command
 		_gsmWriteLine("AT");
@@ -199,10 +199,10 @@ int8_t gsmPowerOn(void)
 #endif
 		// Resetting the modem
 		LOG_INFO("GSM: Resetting...\n");
-		gsmReset();
+		gsm_reset();
 	} else {
 		LOG_INFO("GSM: Powering-on...\n");
-		gsm_powerOn();
+		gsm_on();
 	}
 
 	// When DCE powers on with the autobauding enabled, it is recommended
@@ -221,7 +221,7 @@ int8_t gsmPowerOn(void)
 void gsmPowerOff(void)
 {
 	LOG_INFO("GSM: Powering-off...\n");
-	gsm_powerOff();
+	gsm_off();
 	LED_GSM_OFF();
 }
 

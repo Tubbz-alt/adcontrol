@@ -63,14 +63,14 @@
 #define SET_IN(SIG)   (BIT_CHANGE(SIG##_DIR, (SIG##_PIN, 0)))
 
 
-INLINE uint8_t gsm_statusIn(void)
+INLINE uint8_t gsm_status(void)
 {
 	return (PIND & BV8(PD4));
 }
 
-INLINE void gsm_powerOn(void)
+INLINE void gsm_on(void)
 {
-	while ( !gsm_statusIn() ) {
+	while ( !gsm_status() ) {
 		PORTD &= ~BV8(PD5);
 		DDRD |= BV8(PD5);
 		//SET_LOW(POWER);
@@ -82,9 +82,9 @@ INLINE void gsm_powerOn(void)
 	}
 }
 
-INLINE void gsm_powerOff(void)
+INLINE void gsm_off(void)
 {
-	while ( gsm_statusIn() ) {
+	while ( gsm_status() ) {
 		PORTD &= ~BV8(PD5);
 		DDRD |= BV8(PD5);
 		//SET_LOW(POWER);
