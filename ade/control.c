@@ -84,10 +84,12 @@ gsmSMSMessage_t msg;
 static void updateCSQ(void) {
 	uint8_t csq, level;
 
+	// Prevently switch-off all CSQ LEDs
+	LED_GSM_OFF();
+
 	// Checking for network availability
 	if (!gsmRegistered()) {
 		// Forcing GMS reset
-		LED_GSM_OFF();
 		gsmPowerOn();
 	}
 
@@ -95,18 +97,18 @@ static void updateCSQ(void) {
 	gsmUpdateCSQ();
 	csq = gsmCSQ();
 	DB(LOG_INFO("GSM CSQ [%hu]\r\n", csq));
-	if (csq == 99) {
-		LED_GSM_OFF();
-	} else {
-		level = 0;
-		if (csq > 2)
-			level = 1;
-		if (csq > 16)
-			level = 2;
-		if (csq > 24)
-			level = 3;
-		LED_GSM_CSQ(level);
-	}
+	if (csq == 99)
+		return;
+
+	// Set the CSQ ledbar according to the CSQ signal level
+	level = 0;
+	if (csq > 2)
+		level = 1;
+	if (csq > 16)
+		level = 2;
+	if (csq > 24)
+		level = 3;
+	LED_GSM_CSQ(level);
 
 	// TODO if not network attached: force network scanning and attaching
 }
