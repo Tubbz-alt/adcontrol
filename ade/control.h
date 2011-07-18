@@ -31,6 +31,9 @@
 // The time interval [s] for received SMS handling
 #define SMS_CHECK_SEC	30
 
+// The time interval [h] for GSM restart
+#define GSM_RESTART_HOURES	24
+
 // The time interval [s] for console handling
 #define CMD_CHECK_SEC	 1
 

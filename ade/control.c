@@ -214,6 +214,10 @@ void smsSplitAndParse(char const *from, char *sms) {
 
 }
 
+// The countdown to GSM restat
+#define GSM_RESTART_COUNTDOWN (GSM_RESTART_HOURES * 3600 / GSM_RESTART_HOURES)
+static gsmRestartCountdown = GSM_RESTART_COUNTDOWN;
+
 // The task to process SMS events
 static void sms_task(iptr_t timer) {
 	//Silence "args not used" warning.
@@ -238,6 +242,13 @@ static void sms_task(iptr_t timer) {
 
 	// Process SMS commands
 	smsSplitAndParse(msg.from, msg.text);
+
+	// Restart GSM at each countdown
+	if (--gsmRestartCountdown == 0) {
+		LOG_INFO("\r\nRestarting GSM...");
+		GSM(gsmPowerOff());
+		gsmRestartCountdown = GSM_RESTART_COUNTDOWN;
+	}
 
 	// Reschedule this timer
 	synctimer_add(&sms_tmr, &timers_lst);
