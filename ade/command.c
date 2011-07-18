@@ -80,7 +80,8 @@ MAKE_CMD(rst, "", "",
 	 */
 	ASSERT(args);
 	while(args);
-	0;
+
+	RC_OK;
 }), 0)
 
 //----- CMD: Test SMS commands from console
@@ -177,7 +178,7 @@ MAKE_CMD(li, "", "s",
 
 static uint8_t parseChannelNumber(char const *buff);
 static uint8_t parseChannelNumber(char const *buff) {
-	char *c = buff;
+	const char *c = buff;
 	uint8_t ch = 0;
 
 	for ( ; (*c != ' ' && *c != ';' && *c); ++c) {
@@ -581,27 +582,27 @@ INLINE void NAK(KFile *fd, const char *err) {
 #endif
 }
 
-/*
- * Print args on s, with format specified in t->result_fmt.
- * Return number of valid arguments or -1 in case of error.
- */
-static bool command_reply(KFile *fd, const struct CmdTemplate *t,
-			  const parms *args) {
-	unsigned short offset = strlen(t->arg_fmt) + 1;
-	unsigned short nres = strlen(t->result_fmt);
-
-	for (unsigned short i = 0; i < nres; ++i) {
-		if (t->result_fmt[i] == 'd') {
-			kfile_printf(fd, " %ld", args[offset+i].l);
-		} else if (t->result_fmt[i] == 's') {
-			kfile_printf(fd, " %s", args[offset+i].s);
-		} else {
-			abort();
-		}
-	}
-	kfile_printf(fd, "\r\n");
-	return true;
-}
+///*
+// * Print args on s, with format specified in t->result_fmt.
+// * Return number of valid arguments or -1 in case of error.
+// */
+//static bool command_reply(KFile *fd, const struct CmdTemplate *t,
+//			  const parms *args) {
+//	unsigned short offset = strlen(t->arg_fmt) + 1;
+//	unsigned short nres = strlen(t->result_fmt);
+//
+//	for (unsigned short i = 0; i < nres; ++i) {
+//		if (t->result_fmt[i] == 'd') {
+//			kfile_printf(fd, " %ld", args[offset+i].l);
+//		} else if (t->result_fmt[i] == 's') {
+//			kfile_printf(fd, " %s", args[offset+i].s);
+//		} else {
+//			abort();
+//		}
+//	}
+//	kfile_printf(fd, "\r\n");
+//	return true;
+//}
 
 void command_parse(KFile *fd, const char *buf) {
 
