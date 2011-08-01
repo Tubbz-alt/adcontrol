@@ -29,7 +29,28 @@ Serial dbg_port;
 I2c i2c_bus;
 Pca9555 pe;
 
+// Reset status
+uint8_t rst_reason = 0;
+void getResetReason(void);
+void getResetReason(void) {
+      rst_reason = MCUSR;
+      MCUSR = 0x00;
+      wdt_disable();
+}
+
+const char rst_reasons[] = "PEBWJ";
+static void printResetReason(void) {
+        kprintf("Reset reasons [0x%02X]: ", rst_reason);
+		for (uint8_t i = 0; i<5; i++) {
+			if (rst_reason & BV8(i))
+				kprintf("%c", rst_reasons[i]);
+		} 
+        kprintf("\r\n");
+}
+
 static void init(void) {
+
+	getResetReason();
 
 	// Setting LEDs pins (PB1, PA4..7)
 	LED_INIT();
@@ -44,9 +65,6 @@ static void init(void) {
 	timer_init();
 	signals_init();
 
-	MCUSR = 0;
-	wdt_disable();
-
 	IRQ_ENABLE;
 
 }
@@ -57,6 +75,7 @@ int main(void) {
 	LED_ON();
 
 	kprintf("RFN (c) 2011 RCT\r\nBuildNr %d\r\n", vers_build_nr);
+	printResetReason();
 
 	// Testing LEDs
 	for (uint8_t i = 5; i; --i) {
