@@ -332,14 +332,23 @@ static void btn_task(iptr_t timer) {
 #define chGetMoreSamples(CH)  (chData[CH].calSamples)
 #define chMrkSample(CH)       (chData[CH].calSamples--)
 #define chRstSample(CH)       (chData[CH].calSamples = CONFIG_CALIBRATION_SAMPLES);
+
 #define chSetIrms(CH, IRMS)   (chData[CH].Irms = IRMS)
 #define chSetImax(CH, IMAX)   (chData[CH].Imax = IMAX)
 #define chSetVrms(CH, VRMS)   (chData[CH].Vrms = VRMS)
+
+#define chSetVmax(CH, VMAX)   (chData[CH].Vmax = VMAX)
+#define chSetPrms(CH, PRMS)   (chData[CH].Prms = PRMS)
+#define chSetPmax(CH, PMAX)   (chData[CH].Pmax = PMAX)
+
 #define chGetIrms(CH)          chData[CH].Irms
 #define chGetVrms(CH)          chData[CH].Vrms
+#define chGetPrms(CH)          chData[CH].Prms
+
 #define chGetImax(CH)          chData[CH].Imax
-#define chSetPwr(CH, PWR)     (chData[CH].Pwr = PWR)
-#define chGetPwr(CH)           chData[CH].Pwr
+#define chGetVmax(CH)          chData[CH].Vmax
+#define chGetPmax(CH)          chData[CH].Pmax
+
 #define chSetAE(CH, AE)       (chData[CH].ae = AE)
 #define chIncFaults(CH)        chData[CH].fltSamples++
 #define chGetFaults(CH)        chData[CH].fltSamples
@@ -347,6 +356,27 @@ static void btn_task(iptr_t timer) {
 #define chFaulted(CH)         (chData[CH].fltSamples)
 #define chMarkFault(CH)       (chFaulty |= BV16(CH))
 #define chMarkGood(CH)        (chFaulty &= ~BV16(CH))
+
+#if CONFIG_MONITOR_POWER
+typedef double 				chLoad_t;
+# define LOAD_FORMAT 		"%08.3f"
+# define chGetRMS(CH) 		chGetPrms(CH)
+# define chGetMAX(CH) 		chGetPmax(CH)
+/** The minimum load loss to notify a FAULT */
+const double loadFault = ADE_PRMS_LOAD_FAULT/2;
+/** The minimum load variation for calibration  */
+const double minLoadVariation = ADE_PRMS_LOAD_FAULT/2;
+#else
+typedef uint32_t 			chLoad_t;
+# define LOAD_FORMAT 		"%08ld"
+# define chGetRMS(CH) 		chGetIrms(CH)
+# define chGetMAX(CH) 		chGetImax(CH)
+/** The minimum load loss to notify a FAULT */
+const uint32_t loadFault = ADE_IRMS_LOAD_FAULT;
+/** The minimum load variation for calibration  */
+const uint32_t minLoadVariation = (
+		ADE_IRMS_LOAD_FAULT>>ADE_LOAD_CALIBRATION_FACTOR);
+#endif
 
 /** @brief The RFN running modes */
 typedef enum running_modes {
@@ -358,8 +388,10 @@ typedef enum running_modes {
 typedef struct chData {
 	uint32_t Irms;
 	uint32_t Vrms;
+	double   Prms;
 	uint32_t Imax;
-	double Pwr;
+	uint32_t Vmax;
+	double   Pmax;
 	int32_t ae;
 	uint8_t calSamples;
 	uint8_t fltSamples;
@@ -387,13 +419,6 @@ uint16_t chCalib = 0xFFFF;
 
 /** The vector of channels data */
 static chData_t chData[MAX_CHANNELS];
-
-/** The minimum load loss to notify a FAULT */
-const uint32_t loadFault = ADE_IRMS_LOAD_FAULT;
-
-/** The minimum load variation for calibration  */
-const uint32_t minLoadVariation = (
-		ADE_IRMS_LOAD_FAULT>>ADE_LOAD_CALIBRATION_FACTOR);
 
 /** Control flasg */
 uint8_t controlFlags = CF_MONITORING;
@@ -501,26 +526,28 @@ static inline void readMeter(uint8_t ch) {
 		chSetIrms(ch) = chGetIrms(ch)-ADE_IRMS_OFFSET;
 #endif
 
+	// Compute RMS Power
+	chSetPrms(ch, (((double)chGetIrms(ch)*chGetVrms(ch))/100000));
+
 #if CONFIG_CONTROL_TESTING
-	kprintf("%02hd:%08ld:%08ld\r\n", ch+1, chGetIrms(ch), chGetVrms(ch));
+	kprintf("CH: %02hd, Irms: %08ld, Vrms: %08ld, Prms: %4.0f (%08.3f)\r\n",
+			ch+1, chGetIrms(ch), chGetVrms(ch),
+			chGetPrms(ch)/ADE_PWR_RATIO, chGetPrms(ch));
 	return;
 #endif
 
-	// Power convertion
-	chSetPwr(ch, (((double)chGetIrms(ch)*chGetVrms(ch))/100000));
-
 
 #if CONFIG_CONTROL_DEBUG
-	DB(LOG_INFO("CH[%hd] %c%c: Irms %08ld, Vrms %08ld => Pwr %4.0fW (%08.3f)\r\n",
+	DB(LOG_INFO("CH[%hd] %c%c: Irms %08ld, Vrms %08ld => Prms %4.0fW (%08.3f)\r\n",
 				ch+1, chUncalibrated(ch) ? 'C' : 'M',
 				chFaulted(ch) ? 'F' : 'S',
 				chGetIrms(ch), chGetVrms(ch),
-				chGetPwr(ch)/ADE_PWR_RATIO,
-				chGetPwr(ch)));
+				chGetPrms(ch)/ADE_PWR_RATIO,
+				chGetPrms(ch)));
 #else
 	DB(LOG_INFO("CH[%hd] %c: %4.0f [W]\r\n",
 				ch+1, chUncalibrated(ch) ? 'C' : 'M',
-				chGetPwr(ch)/ADE_PWR_RATIO));
+				chGetPrms(ch)/ADE_PWR_RATIO));
 #endif
 
 }
@@ -614,7 +641,11 @@ static inline void chRecalibrate(uint8_t ch) {
 		return;
 	// Set required calibration points
 	chSetImax(ch, 0);
+	chSetVmax(ch, 0);
+	chSetPmax(ch, 0);
 	chSetIrms(ch, 0);
+	chSetVrms(ch, 0);
+	chSetPrms(ch, 0);
 	chMarkGood(ch);
 	chRstFaults(ch);
 	chRstSample(ch);
@@ -669,19 +700,21 @@ static void calibrate(uint8_t ch) {
 	if (!chGetMoreSamples(ch) &&
 			chUncalibrated(ch)) {
 		// Mark channel as calibrated
-		kprintf("CH[%hd]: calibration DONE %4.0f [W] (%08ld)\r\n",
-				ch+1, chData[ch].Pwr/8500, chData[ch].Imax);
+		kprintf("CH[%hd]: calibration DONE, %c: "LOAD_FORMAT"\r\n",
+				ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
+				chGetRMS(ch));
 		chMarkCalibrated(ch);
 		return;
 	}
 	
-	kprintf("CH[%hd]: (max,cur)=(%08ld,%08ld)...\r\n",
-			ch+1, chGetImax(ch), chGetIrms(ch));
+	kprintf("CH[%hd]: %c(max,cur)=("LOAD_FORMAT", "LOAD_FORMAT" )...\r\n",
+			ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
+			chGetMAX(ch), chGetRMS(ch));
 
 	// Decrease calibration samples required
 	chMrkSample(ch);
 
-	if (chGetImax(ch) >= chGetIrms(ch)) {
+	if (chGetMAX(ch) >= chGetRMS(ch)) {
 		// TODO better verify to avoid being masked by a load peak
 		return;
 	}
@@ -691,41 +724,52 @@ static void calibrate(uint8_t ch) {
 	chData[ch].calSamples = CONFIG_CALIBRATION_SAMPLES;
 
 	// Avoid recording load peak
-	if ((chGetIrms(ch)-chGetImax(ch)) > loadFault) {
-		chData[ch].Imax += (loadFault>>2);
+	if ((chGetRMS(ch)-chGetMAX(ch)) > loadFault) {
+		chGetMAX(ch) += (loadFault/2);
 		return;
 	}
 
-	chData[ch].Imax = chGetIrms(ch);
+	chGetMAX(ch) = chGetRMS(ch);
+
+	// Keep track of current RMS value for both I and V
+#if CONFIG_MONITOR_POWER
+	chSetImax(ch, chGetIrms(ch));
+#else
+	chSetPmax(ch, chGetPrms(ch));
+#endif
+	chSetVmax(ch, chGetVrms(ch));
+
 }
 #else
 # warning USING BI-SEARCH CALIBRATION
 /** @brief Defines the calibration policy for each channel */
 static void calibrate(uint8_t ch) {
-	uint32_t var;
+	chLoad_t var;
 
 	if (!chGetMoreSamples(ch) &&
 			chUncalibrated(ch)) {
 		// Mark channel as calibrated
-		kprintf("CH[%hd]: calibration DONE %4.0f [W] (%08ld)\r\n",
-				ch+1, chData[ch].Pwr/8500, chData[ch].Imax);
+		kprintf("CH[%hd]: calibration DONE, %c: "LOAD_FORMAT"\r\n",
+				ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
+				chGetRMS(ch));
 		chMarkCalibrated(ch);
 		return;
 	}
-	
-	kprintf("CH[%hd]: (max,cur)=(%08ld,%08ld)...\r\n",
-			ch+1, chGetImax(ch), chGetIrms(ch));
+
+	kprintf("CH[%hd]: %c(max,cur)=("LOAD_FORMAT", "LOAD_FORMAT" )...\r\n",
+			ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
+			chGetMAX(ch), chGetRMS(ch));
 
 	// Decrease calibration samples required
 	chMrkSample(ch);
 
-	// Update current measure (by half of the variation)
-	if (chGetImax(ch) >= chGetIrms(ch)) {
-		var = chGetImax(ch)-chGetIrms(ch);
-		chData[ch].Imax -= var>>1;
+	// Update load measure (by half of the variation)
+	if (chGetMAX(ch) >= chGetRMS(ch)) {
+		var = chGetMAX(ch)-chGetRMS(ch);
+		chGetMAX(ch) -= (var/2);
 	} else {
-		var = chGetIrms(ch)-chGetImax(ch);
-		chData[ch].Imax += var>>1;
+		var = chGetRMS(ch)-chGetMAX(ch);
+		chGetMAX(ch) += (var/2);
 	}
 
 	// Mark calibration if measure is too noise
@@ -734,6 +778,13 @@ static void calibrate(uint8_t ch) {
 		chData[ch].calSamples = CONFIG_CALIBRATION_SAMPLES;
 	}
 
+	// Keep track of current RMS value for both I and V
+#if CONFIG_MONITOR_POWER
+	chSetImax(ch, chGetIrms(ch));
+#else
+	chSetPmax(ch, chGetPrms(ch));
+#endif
+	chSetVmax(ch, chGetVrms(ch));
 
 }
 #endif
@@ -757,18 +808,18 @@ static inline uint8_t chLoadLoss(uint8_t ch) {
 #else
 #warning USING MULTI-CHECK LOAD LOSS
 static inline uint8_t chLoadLoss(uint8_t ch) {
-	uint32_t loadLoss;
+	chLoad_t loadLoss;
 
 	// TODO we should consider increasing values, maybe to adapt the
 	// calibration to drift values, or new loads
-	if (chGetIrms(ch) >= chGetImax(ch)) {
+	if (chGetRMS(ch) >= chGetMAX(ch)) {
 		chMarkGood(ch);
 		chRstFaults(ch);
 		return 0;
 	}
 
 	// Computing LOAD loss
-	loadLoss = chGetImax(ch)-chGetIrms(ch);
+	loadLoss = chGetMAX(ch)-chGetRMS(ch);
 	if (loadLoss < loadFault) {
 		chMarkGood(ch);
 		chRstFaults(ch);
@@ -861,8 +912,8 @@ static void monitor(uint8_t ch) {
 
 	// Fault detected
 	rmode = FAULT;
-	kprintf("WARN: Load loss on CH[%hd] (%08ld => %08ld)\r\n",
-		ch+1, chData[ch].Imax, chData[ch].Irms);
+	kprintf("WARN: Load loss on CH[%hd] ("LOAD_FORMAT" => "LOAD_FORMAT")\r\n",
+		ch+1, chGetMAX(ch), chGetRMS(ch));
 
 	// Send SMS notification
 	notifyLoss(ch);

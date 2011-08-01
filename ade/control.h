@@ -56,10 +56,13 @@
 // The Power constant [1W]
 // - (max) power sample
 // - multimeter readed Power
-#define ADE_PWR_RATIO (24000/6)
+#define ADE_PWR_RATIO (19700)
 
-// The LOAD FAULT level
+// The I LOAD FAULT level
 #define ADE_IRMS_LOAD_FAULT 3000l
+
+// The P LOAD FAULT level
+#define ADE_PRMS_LOAD_FAULT 160000.0
 
 // The Load FAULT sensitivity factor (power of 2)
 #define ADE_LOAD_CALIBRATION_FACTOR 1

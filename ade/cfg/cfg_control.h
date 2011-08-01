@@ -66,6 +66,12 @@
  */
 #define CONFIG_FAULT_SAMPLES 32
 
+/**
+ * Set to use P[W] insetad of I[A]
+ *
+ * $WIZ$ type = "boolean"
+ */
+#define CONFIG_MONITOR_POWER 1
 
 /**
  * Module logging level.
