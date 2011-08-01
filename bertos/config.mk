@@ -30,6 +30,7 @@ AS      = $(CC) -x assembler-with-cpp
 LD      = $(CC)
 LDXX	= $(CXX)
 OBJCOPY = objcopy
+SIZE    = size
 STRIP   = strip
 INSTALL = cp -a
 RM      = rm -f

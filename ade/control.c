@@ -127,7 +127,7 @@ int8_t controlNotifyBySMS(const char *dest, const char *buff) {
 		LOG_WARN("Network not available\r\n");
 		if (try % timeout) {
 			LOG_WARN("Trying again in 60s\r\n");
-			timer_delay(60000);
+			DELAY(60000);
 		} else {
 			// Resetting modem once every (10*timeout) mins
 			gsmPowerOn();
@@ -147,7 +147,7 @@ int8_t controlNotifyBySMS(const char *dest, const char *buff) {
 		LOG_WARN("Low network signal [%d]\r\n", gsmCSQ());
 		if (try % timeout) {
 			LOG_WARN("Trying again in 60s\r\n");
-			timer_delay(60000);
+			DELAY(60000);
 		} else {
 			// Resetting modem once every (20*timeout) mins
 			gsmPowerOn();
@@ -210,7 +210,7 @@ void smsSplitAndParse(char const *from, char *sms) {
 	controlNotifyBySMS(from, cmdBuff);
 
 	// Wait for SMS being delivered
-	timer_delay(10000);
+	DELAY(10000);
 
 }
 
@@ -236,7 +236,7 @@ static void sms_task(iptr_t timer) {
 	GSM(smsIndex = gsmSMSByIndex(&msg, 1));
 	if (smsIndex==1) {
 		command_parse(&dbg_port.fd, msg.text);
-		timer_delay(500);
+		DELAY(500);
 		GSM(gsmSMSDel(1));
 	}
 
@@ -307,7 +307,7 @@ static void btn_task(iptr_t timer) {
 			// Button pressed fot t > BTN_CHECK_SEC+BTN_RESET_SEC
 			reset_board();
 		}
-		timer_delay(100);
+		DELAY(100);
 	}
 
 	// Button pressed BTN_CHECK_SEC < t < BTN_CHECK_SEC+BTN_RESET_SEC
@@ -445,7 +445,7 @@ static inline void resetMeter(void) {
 	LOG_INFO("Reset ADE7753\r\n");
 	// Reset the meter
 	meter_ade7753_reset();
-	timer_delay(20);
+	DELAY(20);
 	// Set LCAE
 	meter_ade7753_setLCEA(500);
 
@@ -477,7 +477,7 @@ static inline void resetMeter(void) {
 	signal_wait(SIGNAL_ADE_ZX);
 
 	// Wait for a valid measure
-	timer_delay(ADE_LINE_CYCLES_PERIOD
+	DELAY(ADE_LINE_CYCLES_PERIOD
 			*ADE_LINE_CYCLES_SAMPLE_COUNT);
 }
 
@@ -830,7 +830,7 @@ static void notifyLoss(uint8_t ch) {
 	LOG_INFO("\n\n", dst);
 
 	// Wait for SMS being delivered
-	timer_delay(10000);
+	DELAY(10000);
 }
 
 void controlNotifySpoiled(void) {
@@ -896,7 +896,7 @@ static void notifyFault(void) {
 	LOG_INFO("\n\n");
 
 	// Wait for SMS being delivered
-	timer_delay(10000);
+	DELAY(10000);
 }
 
 static void buttonHandler(void) {
@@ -961,7 +961,7 @@ static void notifyCalibrationCompleted(void) {
 	LOG_INFO("\n\n");
 
 	// Wait for SMS being delivered
-	timer_delay(10000);
+	DELAY(10000);
 }
 
 #if CONFIG_CONTROL_TESTING 
@@ -1075,7 +1075,7 @@ void controlLoop(void) {
 						chSpoiled,
 						progress[i++%4]));
 		}
-		timer_delay(500);
+		DELAY(500);
 		return;
 	}
 

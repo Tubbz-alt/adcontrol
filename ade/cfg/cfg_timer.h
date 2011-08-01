@@ -64,4 +64,23 @@
  */
 #define CONFIG_TIMER_UDELAY  1
 
+
+// Add AVR Watchdog support
+#include <avr/wdt.h>
+
+// Watchdog management
+#define	WATCHDOG_RESET()   wdt_reset()
+#define	WATCHDOG_ENABLE()  wdt_enable(WDTO_8S)
+#define	WATCHDOG_DISABLE() wdt_disable()
+
+// A Watch-Dog aware delay routine, this is safe only on single-task
+// firmwares
+#define DELAY(MS)\
+	do {\
+		WATCHDOG_DISABLE();\
+		timer_delay(MS);\
+		WATCHDOG_ENABLE();\
+	} while(0)
+
+
 #endif /* CFG_TIMER_H */

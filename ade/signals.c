@@ -69,7 +69,7 @@ void signal_wait(uint8_t sig) {
 	while (!signal_pending(sig)) {
 		cpu_relax();
 //		DB(
-//				timer_delay(100);
+//				DELAY(100);
 //				kprintf("v");
 //		)
 	}
@@ -135,7 +135,7 @@ void sigTesting() {
 
 	while(1) {
 
-		timer_delay(1000);
+		DELAY(1000);
 
 		LOG_INFO("PINC: 0x%02X\r\n", PINC);
 		if (signal_pending(SIGNAL_PLAT_BUTTON)) {

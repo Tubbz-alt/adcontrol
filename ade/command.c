@@ -39,7 +39,7 @@ MAKE_CMD(ver, "", "s",
 /* Sleep. Example of declaring function body directly in macro call.  */
 MAKE_CMD(sleep, "d", "",
 ({
-	timer_delay((mtime_t)args[1].l);
+	DELAY((mtime_t)args[1].l);
 	RC_OK;
 }), 0)
 
@@ -141,7 +141,7 @@ MAKE_CMD(vn, "", "s",
 		len = strlen(cmdBuff);
 		sprintf(cmdBuff+len, "\n%d) %s;", i, buff);
 
-		timer_delay(5);
+		DELAY(5);
 	}
 
 	LOG_INFO("\n\n%s\r\n\n", cmdBuff);
@@ -619,7 +619,7 @@ void command_parse(KFile *fd, const char *buf) {
 	//}
 
 	// Wait for console buffer to flush
-	timer_delay(500);
+	DELAY(500);
 
 	return;
 }

@@ -195,7 +195,7 @@ int8_t gsmPowerOn(void)
 			return result;
 		// Not responding to AT comand... shut-down
 		gsm_powerOff();
-		timer_delay(10000);
+		DELAY(10000);
 #endif
 		// Resetting the modem
 		LOG_INFO("GSM: Resetting...\n");
@@ -208,7 +208,7 @@ int8_t gsmPowerOn(void)
 	// When DCE powers on with the autobauding enabled, it is recommended
 	// to wait 2 to 3 seconds before sending the first AT character.
 	LOG_INFO("Wait (20s) for network attachment\n");
-	timer_delay(20000);
+	DELAY(20000);
 
 	result = gsmAutobaud();
 	if (result != OK)
@@ -600,7 +600,7 @@ int8_t gsmSMSSend(const char *number, const char *message)
 	// Sending destination number
 	sprintf(buff, "AT+CMGS=\"%s\", 145", number);
 	_gsmWriteLine(buff);
-	timer_delay(1000);
+	DELAY(1000);
 	//_gsmWrite("AT+CMGS=\"", 9);
 	//_gsmWrite(number, strlen(number));
 	//_gsmWriteLine("\", 145");
@@ -619,7 +619,7 @@ int8_t gsmSMSSend(const char *number, const char *message)
 
 	// Sending message
 	_gsmWriteLine(message);
-	timer_delay(1000);
+	DELAY(1000);
 
 	// Sending terminator
 	_gsmWriteLine("\x1a");
@@ -862,16 +862,16 @@ void NORETURN gsmTesting(Serial *port) {
 	gsmSMSConf(0);
 
 	//gsmUpdateConf();
-	//timer_delay(1000);
+	//DELAY(1000);
 
-	//timer_delay(5000);
+	//DELAY(5000);
 	//gsmSMSSend("+393473153808", "Test message from RFN");
 	while (1) {
 		gsmUpdateCSQ();
-		timer_delay(5000);
+		DELAY(5000);
 		//gsmSMSSend("+393473153808", "Test message from RFN");
 		//gsmSMSSend("+393357963938", "Test message from RFN");
-		//timer_delay(10000);
+		//DELAY(10000);
 	}
 
 //  Prova invio messaggio molto lungo, che impiega tutti i 160 caratteri a
@@ -884,12 +884,12 @@ void NORETURN gsmTesting(Serial *port) {
 		LOG_INFO("Iteration %d/100\n", i);
 
 		gsmSMSList();
-		timer_delay(1000);
+		DELAY(1000);
 
 		//gsmSMSLast(&msg);
 		for (uint8_t j=1; j<10; j++) {
 			gsmSMSByIndex(&msg,j);
-			timer_delay(500);
+			DELAY(500);
 		}
 
 		gsmSMSDelRead();
@@ -897,10 +897,10 @@ void NORETURN gsmTesting(Serial *port) {
 		if (!(i%3))
 			gsmSMSSend("+393357963938", "Test message from RFN");
 
-		timer_delay(10000);
+		DELAY(10000);
 	}
 
-	timer_delay(15000);
+	DELAY(15000);
 	gsmPowerOff();
 }
 #endif

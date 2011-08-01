@@ -129,6 +129,7 @@ $(1)_CXX     ?= $$($(1)_PREFIX)$$(CXX)$$($(1)_SUFFIX)
 $(1)_AS      ?= $$($(1)_PREFIX)$$(AS)$$($(1)_SUFFIX)
 $(1)_AR      ?= $$($(1)_PREFIX)$$(AR)$$($(1)_SUFFIX)
 $(1)_OBJCOPY ?= $$($(1)_PREFIX)$$(OBJCOPY)$$($(1)_SUFFIX)
+$(1)_SIZE    ?= $$($(1)_PREFIX)$$(SIZE)$$($(1)_SUFFIX)
 $(1)_STRIP   ?= $$($(1)_PREFIX)$$(STRIP)$$($(1)_SUFFIX)
 ifneq ($$(strip $$($(1)_CXXSRC)),)
 	$(1)_LD = $$($(1)_PREFIX)$$(LDXX)$$($(1)_SUFFIX)
@@ -340,6 +341,10 @@ $$(OUTDIR)/$(1).rom: $$(OUTDIR)/$(1).elf
 	$$($(1)_OBJCOPY) -O $$(FORMAT) $$< $$@
 	$$($(1)_OBJCOPY) -j .eeprom --no-change-warnings --change-section-lma .eeprom=0 -O ihex $$< $$(@:.rom=.eep)
 #	$$($(1)_OBJCOPY) -j .eeprom --set-section-flags=.eeprom="alloc,load" -O $$(FORMAT) $$< $$(@:.rom=.eep)
+
+report: $$(OUTDIR)/$(1).elf
+	$$($(1)_SIZE) --mcu=$$($(1)_MCU) -C $$(OUTDIR)/$(1).elf
+
 
 endef
 

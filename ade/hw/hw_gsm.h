@@ -75,10 +75,10 @@ INLINE void gsm_on(void)
 		DDRD |= BV8(PD5);
 		//SET_LOW(POWER);
 		//SET_OUT(POWER);
-		timer_delay(1500);
+		DELAY(1500);
 		//SET_IN(POWER);
 		DDRD &= ~BV8(PD5);
-		timer_delay(2500);
+		DELAY(2500);
 	}
 }
 
@@ -89,10 +89,10 @@ INLINE void gsm_off(void)
 		DDRD |= BV8(PD5);
 		//SET_LOW(POWER);
 		//SET_OUT(POWER);
-		timer_delay(1500);
+		DELAY(1500);
 		//SET_IN(POWER);
 		DDRD &= ~BV8(PD5);
-		timer_delay(2000);
+		DELAY(2000);
 	}
 
 }
@@ -103,10 +103,10 @@ INLINE void gsm_reset(void)
 	DDRD |= BV8(PD6);
 	//SET_LOW(RESET);
 	//SET_OUT(RESET);
-	timer_delay(10);
+	DELAY(10);
 	//SET_IN(RESET);
 	DDRD &= ~BV8(PD6);
-	timer_delay(2000);
+	DELAY(2000);
 }
 
 /**

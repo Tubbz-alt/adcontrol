@@ -135,27 +135,27 @@ void ee_dumpConf(void) {
 	uint16_t chMask;
 
 	LOG_INFO(".:: EEPROM Conf\r\n");
-	timer_delay(5);
+	DELAY(5);
 
 	// Dump SMS destinations
 	for (i=1; i<=MAX_SMS_DEST; i++) {
 		ee_getSmsDest(i, buff, MAX_SMS_NUM);
 		LOG_INFO(" SMS[%d]: %s\r\n", i, buff);
-		timer_delay(5);
+		DELAY(5);
 	}
 
 	// Dump SMS message
 	ee_getSmsText(buff, MAX_MSG_TEXT);
 	LOG_INFO(" SMS Text: %s\r\n", buff);
-	timer_delay(5);
+	DELAY(5);
 
 	chMask = ee_getEnabledChMask();
 	LOG_INFO(" Enabled CHs: 0x%04X\r\n", chMask);
-	timer_delay(5);
+	DELAY(5);
 
 	chMask = ee_getCriticalChMask();
 	LOG_INFO(" Critical CHs: 0x%04X\r\n", chMask);
-	timer_delay(5);
+	DELAY(5);
 }
 
 
