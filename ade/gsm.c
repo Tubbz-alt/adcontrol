@@ -374,8 +374,10 @@ static int8_t _gsmWrite(const char *cmd, size_t count)
 	ser_purge(gsm);
 
 	// Sending the AT command
+	WATCHDOG_RESET();
 	for (i=0; cmd[i]!='\0' && count; i++, count--) {
 		kfile_putc(cmd[i], &(gsm->fd));
+		WATCHDOG_RESET();
 	}
 	return i;
 }
@@ -395,8 +397,10 @@ static int8_t _gsmWriteLine(const char *cmd)
 	ser_setstatus(gsm, 0);
 
 	// Sending the AT command
+	WATCHDOG_RESET();
 	for (i=0; cmd[i]!='\0'; i++) {
 		kfile_putc(cmd[i], &(gsm->fd));
+		WATCHDOG_RESET();
 	}
 	kfile_write(&(gsm->fd), "\r\n", 2);
 
@@ -414,12 +418,14 @@ static int8_t _gsmRead(char *resp, uint8_t size)
 
 	// NOTE: kfile_gets returns also "empty" lines.
 	// Loop to get a (not null) text lines (or EOF, e.g. timeout)
+	WATCHDOG_RESET();
 	do {
 		len = kfile_gets(&(gsm->fd), (void*)resp , size);
 		if (len==-1) {
 			gsmDebug("RX FAILED\n");
 			return len;
 		}
+		WATCHDOG_RESET();
 	} while (!len);
 
 	gsmDebug("RX [%s]\n", resp);
