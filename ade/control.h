@@ -37,6 +37,9 @@
 // The time interval [s] for console handling
 #define CMD_CHECK_SEC	 1
 
+// The time interval [s] for console handling
+#define CH_SUSPEND_SEC	 60
+
 // The time interval [s] for button handling
 #define BTN_CHECK_SEC	 3
 

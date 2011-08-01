@@ -215,8 +215,9 @@ void smsSplitAndParse(char const *from, char *sms) {
 }
 
 // The countdown to GSM restat
-#define GSM_RESTART_COUNTDOWN (GSM_RESTART_HOURES * 3600 / GSM_RESTART_HOURES)
-static gsmRestartCountdown = GSM_RESTART_COUNTDOWN;
+#define GSM_RESTART_COUNTDOWN (\
+		(uint32_t)GSM_RESTART_HOURES * 3600 / GSM_RESTART_HOURES)
+static uint32_t gsmRestartCountdown = GSM_RESTART_COUNTDOWN;
 
 // The task to process SMS events
 static void sms_task(iptr_t timer) {
@@ -261,6 +262,12 @@ Timer cmd_tmr;
 // The evento to handle Console events
 Event cmd_evt;
 
+// Forward declaration
+extern uint16_t chSuspended;
+#define CH_SUSPEND_TIMEOUT (CH_SUSPEND_SEC / CMD_CHECK_SEC)
+#define chSetSuspendCountdown() (chResumeCountdown = CH_SUSPEND_TIMEOUT)
+static uint8_t chResumeCountdown = CH_SUSPEND_TIMEOUT;
+
 // The task to process Console events
 static void cmd_task(iptr_t timer) {
 //static void cmd_task(struct Event *evt) {
@@ -270,6 +277,12 @@ static void cmd_task(iptr_t timer) {
 	//kprintf("Parse CMD\n");
 	//console_run((KFile*)(evt->Ev.Int.user_data));
 	console_run(&dbg_port.fd);
+
+	// Reset suspended CHs mask
+	if (!chResumeCountdown) {
+		chSuspended = 0x0000;
+	}
+	chResumeCountdown--;
 
 	// Reschedule this timer
 	synctimer_add(&cmd_tmr, &timers_lst);
@@ -356,6 +369,7 @@ static void btn_task(iptr_t timer) {
 #define chFaulted(CH)         (chData[CH].fltSamples)
 #define chMarkFault(CH)       (chFaulty |= BV16(CH))
 #define chMarkGood(CH)        (chFaulty &= ~BV16(CH))
+#define chSuspend(CH)         (chSuspended |= BV16(CH))
 
 #if CONFIG_MONITOR_POWER
 typedef double 				chLoad_t;
@@ -410,6 +424,9 @@ static uint16_t chFaulty = 0x0000;
 
 /** The mask of channels in fault state */
 uint16_t chSpoiled = 0x0000;
+
+/** The mask of suspended channels */
+uint16_t chSuspended = 0x0000;
 
 /** @brief The current running mode */
 static running_modes_t rmode = CALIBRATION;
@@ -559,7 +576,7 @@ static uint8_t sampleChannel(void) {
 	uint16_t activeChs;
 
 	// Get powered on (and enabled) channels
-	activeChs = (getActiveChannels() & chEnabled);
+	activeChs = (getActiveChannels() & chEnabled & ~chSuspended);
 	if (!activeChs)
 		return MAX_CHANNELS;
 
@@ -829,6 +846,15 @@ static inline uint8_t chLoadLoss(uint8_t ch) {
 	// Faults detection
 	chMarkFault(ch);
 	chIncFaults(ch);
+
+	// Suspend the channel at halt faulty samples
+	if (chGetFaults(ch) == (CONFIG_FAULT_SAMPLES>>1)) {
+		chSuspend(ch);
+		// Schedule channel resume resume
+		chSetSuspendCountdown();
+	}
+
+	// Notify on faulty samples overflow
 	if (chGetFaults(ch)>CONFIG_FAULT_SAMPLES) {
 		return 1;
 	}

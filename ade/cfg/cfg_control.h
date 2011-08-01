@@ -64,7 +64,7 @@
  *
  * $WIZ$ type = "boolean"
  */
-#define CONFIG_FAULT_SAMPLES 32
+#define CONFIG_FAULT_SAMPLES 64
 
 /**
  * Set to use P[W] insetad of I[A]
