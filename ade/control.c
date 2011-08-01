@@ -1117,6 +1117,9 @@ void controlSetup(void) {
 	// Update signal level
 	GSM(updateCSQ());
 
+	// Enabling the watchdog for the control loop
+	WATCHDOG_ENABLE();
+
 }
 
 static char progress[] = "/|\\-";
@@ -1124,6 +1127,9 @@ static char progress[] = "/|\\-";
 void controlLoop(void) {
 	static uint8_t i = 0;
 	uint8_t ch; // The currently selected channel
+
+	// Keep quite the dog at each iteration
+	WATCHDOG_RESET();
 
 	// Set device status led
 	if (CalibrationDone())
