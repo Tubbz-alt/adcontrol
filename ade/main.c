@@ -116,6 +116,9 @@ int main(void) {
 	/* Testing CHANNELS (if enabled by configuration) */
 	chsTesting();
 
+	/* Dump EEPROM configuration */
+	ee_loadConf();
+
 #if 1
 	/* Power-on Modem */
 	gsmInit(&gsm_port);

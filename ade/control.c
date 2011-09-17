@@ -1095,9 +1095,6 @@ void controlSetup(void) {
 	console_init(&dbg_port.fd);
 	ser_settimeouts(&dbg_port, 0, 1000);
 
-	// Dump EEPROM configuration
-	ee_dumpConf();
-
 	// Dump ADE7753 configuration
 	meter_ade7753_dumpConf();
 

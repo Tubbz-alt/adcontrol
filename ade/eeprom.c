@@ -207,18 +207,21 @@ void     ee_setCalibrationWeeks(uint8_t cWeeks) {
 			cWeeks);
 	pConf->calibWeeks = cWeeks;
 }
-void ee_dumpConf(void) {
+
+
+
+
+void ee_loadConf(void) {
 	uint8_t i;
 	char buff[MAX_MSG_TEXT];
-	uint16_t chMask;
 
-	LOG_INFO(".:: EEPROM Conf\r\n");
+	LOG_INFO("EEPROM Conf:\r\n");
 	DELAY(5);
 
 	// Dump SMS destinations
 	for (i=1; i<=MAX_SMS_DEST; i++) {
 		ee_getSmsDest(i, buff, MAX_SMS_NUM);
-		LOG_INFO(" SMS[%d]: %s\r\n", i, buff);
+		LOG_INFO(" SMS [%d]: %s\r\n", i, buff);
 		DELAY(5);
 	}
 
@@ -227,13 +230,47 @@ void ee_dumpConf(void) {
 	LOG_INFO(" SMS Text: %s\r\n", buff);
 	DELAY(5);
 
-	chMask = ee_getEnabledChMask();
-	LOG_INFO(" Enabled CHs: 0x%04X\r\n", chMask);
+	pConf->enabledChannelsMask = eeprom_read_word(
+			(uint16_t*)&eeconf.enabledChannelsMask);
+	LOG_INFO(" Enabled CHs:  %9s0x%04X\r\n",
+			" ", pConf->enabledChannelsMask);
 	DELAY(5);
 
-	chMask = ee_getCriticalChMask();
-	LOG_INFO(" Critical CHs: 0x%04X\r\n", chMask);
+	pConf->criticalChannelsMask = eeprom_read_word(
+			(uint16_t*)&eeconf.criticalChannelsMask);
+	LOG_INFO(" Critical CHs: %9s0x%04X\r\n",
+			" ", pConf->criticalChannelsMask);
 	DELAY(5);
+
+	pConf->faultSamples = eeprom_read_byte(
+			(uint8_t*)&eeconf.faultSamples);
+	LOG_INFO(" Fault samples: %14hu\r\n",
+			pConf->faultSamples);
+	DELAY(5);
+
+	pConf->faultChecks = eeprom_read_byte(
+			(uint8_t*)&eeconf.faultChecks);
+	LOG_INFO(" Fault checks: %15hu\r\n",
+			pConf->faultChecks);
+	DELAY(5);
+
+	pConf->faultCheckTime = eeprom_read_word(
+			(uint16_t*)&eeconf.faultCheckTime);
+	LOG_INFO(" Fault check time: %11u [s]\r\n",
+			pConf->faultCheckTime);
+	DELAY(5);
+
+	pConf->faultLevel = eeprom_read_dword(
+			(uint32_t*)&eeconf.faultLevel);
+	LOG_INFO(" Fault level: %16lu\r\n",
+			pConf->faultLevel);
+	DELAY(5);
+
+	pConf->calibWeeks = eeprom_read_byte(
+			(uint8_t*)&eeconf.calibWeeks);
+	LOG_INFO(" Calibration weeks: %10hu\r\n",
+			pConf->calibWeeks);
+	DELAY(5);
+
 }
-
 

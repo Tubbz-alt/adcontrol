@@ -82,7 +82,8 @@ void     ee_setFaultLevel(uint32_t);
 uint8_t  ee_getCalibrationWeeks(void);
 void     ee_setCalibrationWeeks(uint8_t);
 
-void ee_dumpConf(void);
 extern runtime_conf_t *pConf;
+
+void ee_loadConf(void);
 
 #endif /* end of include guard: EEPROMS_H */
