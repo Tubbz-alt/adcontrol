@@ -638,7 +638,6 @@ int8_t gsmSMSSend(const char *number, const char *message)
 }
 
 gsmSMSMessage_t msg;
-char buff[256];
 
 
 /**
@@ -808,8 +807,9 @@ int8_t gsmSMSDelRead(void)
 
 
 
-int8_t gsmSMSList(void)
-{
+
+int8_t gsmSMSList(void) {
+	char buff[256];
 	_gsmWriteLine("AT+CMGL=\"ALL\",1");
 	do {
 		if (_gsmRead(buff, 255) == -1) {
@@ -822,6 +822,7 @@ int8_t gsmSMSList(void)
 }
 
 static void gsmSMSListTesting(void) {
+	char buff[256];
 	int8_t resp;
 
 	// Read SMS Message Storage
