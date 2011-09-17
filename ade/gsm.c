@@ -429,6 +429,10 @@ static int8_t _gsmRead(char *resp, uint8_t size)
 	} while (!len);
 
 	gsmDebug("RX [%s]\n", resp);
+
+	// Wait a while before allowing for a new GSM command
+	timer_delay(200);
+
 	return len;
 }
 
