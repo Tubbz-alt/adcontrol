@@ -1,6 +1,7 @@
 
 
 #include "eeprom.h"
+#include "cfg/cfg_control.h"
 
 #include <avr/eeprom.h>
 
@@ -23,6 +24,13 @@ eeprom_conf_t EEMEM eeconf = {
 			"EEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBE\0",
 	.enabledChannelsMask = 0x0000,
 	.criticalChannelsMask = 0x0000,
+
+	.faultSamples = CONFIG_FAULT_SAMPLES,
+	.faultChecks = CONFIG_FAULT_CHECKS,
+	.faultCheckTime = CONFIG_FAULT_CHECK_TIME,
+	.faultLevel = (uint32_t)1000 * CONFIG_FAULT_LEVEL,
+
+	.calibWeeks = CONFIG_CALIBRATION_WEEKS,
 };
 
 // The on RAM configuration (for run-time use)
@@ -135,6 +143,70 @@ int16_t ee_getCriticalChMask(void) {
 			(uint16_t*)&eeconf.criticalChannelsMask);
 }
 
+
+
+
+
+
+
+uint8_t  ee_getFaultSamples(void) {
+	return pConf->faultSamples;
+}
+
+void     ee_setFaultSamples(uint8_t fSamples) {
+	eeprom_update_byte(
+			(uint8_t*)&eeconf.faultSamples,
+			fSamples);
+	pConf->faultSamples = fSamples;
+}
+
+
+uint8_t  ee_getFaultChecks(void) {
+	return pConf->faultChecks;
+}
+
+void     ee_setFaultChecks(uint8_t fChecks) {
+	eeprom_update_byte(
+			(uint8_t*)&eeconf.faultChecks,
+			fChecks);
+	pConf->faultChecks = fChecks;
+}
+
+
+uint16_t ee_getFaultCheckTime(void) {
+	return pConf->faultCheckTime;
+}
+
+void     ee_setFaultCheckTime(uint16_t fCheckTime) {
+	eeprom_update_word(
+			(uint16_t*)&eeconf.faultCheckTime,
+			fCheckTime);
+	pConf->faultCheckTime = fCheckTime;
+}
+
+
+uint32_t ee_getFaultLevel(void) {
+	return pConf->faultLevel;
+}
+
+void     ee_setFaultLevel(uint32_t fLevel) {
+	eeprom_update_dword(
+			(uint32_t*)&eeconf.faultLevel,
+			fLevel);
+	pConf->faultLevel = fLevel;
+}
+
+
+uint8_t  ee_getCalibrationWeeks(void) {
+	return pConf->calibWeeks;
+}
+
+void     ee_setCalibrationWeeks(uint8_t cWeeks) {
+	eeprom_update_byte(
+			(uint8_t*)&eeconf.calibWeeks,
+			cWeeks);
+	pConf->calibWeeks = cWeeks;
+}
 void ee_dumpConf(void) {
 	uint8_t i;
 	char buff[MAX_MSG_TEXT];

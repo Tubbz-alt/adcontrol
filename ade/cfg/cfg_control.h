@@ -55,16 +55,55 @@
 /**
  * Number of consecutive and "stable" calibration samples
  *
- * $WIZ$ type = "boolean"
+ * $WIZ$ type = "int"
  */
 #define CONFIG_CALIBRATION_SAMPLES 32
 
 /**
- * Number of consecutive faults to trigger an alarm
+ * Number of consecutive faulty reading to trigger a fault
  *
- * $WIZ$ type = "boolean"
+ * $WIZ$ type = "int"
+ * $WIZ$ min = "16"
+ * $WIZ$ max = "255"
  */
 #define CONFIG_FAULT_SAMPLES 64
+
+/**
+ * Number of faults detections before an alarm is triggered
+ *
+ * $WIZ$ type = "int"
+ * $WIZ$ min = "1"
+ * $WIZ$ max = "255"
+ */
+#define CONFIG_FAULT_CHECKS 3
+
+/**
+ * Number of seconds between successive faults checks
+ *
+ * $WIZ$ type = "int"
+ * $WIZ$ min = "1"
+ * $WIZ$ max = "65535"
+ */
+#define CONFIG_FAULT_CHECK_TIME 180
+
+/**
+ * Default faulty level (K)
+ *
+ * $WIZ$ type = "int"
+ * $WIZ$ min = "1"
+ * $WIZ$ max = "65535"
+ */
+#define CONFIG_FAULT_LEVEL 160
+
+/**
+ * Number of weeks among forced re-calibration
+ *
+ * $WIZ$ type = "int"
+ * $WIZ$ min = "1"
+ * $WIZ$ max = "65535"
+ */
+#define CONFIG_CALIBRATION_WEEKS 16
+
 
 /**
  * Set to use P[W] insetad of I[A]
