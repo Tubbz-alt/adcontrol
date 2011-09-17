@@ -11,7 +11,7 @@
 #define LOG_FORMAT  LOG_FMT_TERSE
 #include <cfg/log.h>
 
-
+// The on EPROM conf (for persistency)
 eeprom_conf_t EEMEM eeconf = {
 	.sms_dest = {
 		EMPTY_NUMBER"\0\0\0\0\0\0\0\0\0\0\0\0",
@@ -24,6 +24,12 @@ eeprom_conf_t EEMEM eeconf = {
 	.enabledChannelsMask = 0x0000,
 	.criticalChannelsMask = 0x0000,
 };
+
+// The on RAM configuration (for run-time use)
+runtime_conf_t rt_conf;
+
+// Pointer to on RAM configuration (for optimized access)
+runtime_conf_t *pConf = &rt_conf;
 
 //static int8_t ee_setBytes(uint8_t *eep, const uint8_t *buf, uint8_t size) {
 //	uint8_t i;
