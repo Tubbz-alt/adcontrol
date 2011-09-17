@@ -144,6 +144,12 @@ static int8_t gsmAutobaud(void)
 	for(try=3; try; try--) {
 		_gsmWriteLine("AT");
 		_gsmRead(buff, 8);
+		if (buff[0] == '0') {
+			gsmDebug("DONE\n");
+			// The GSM has been already configured:
+			// return error to avoid re-configuration
+			return ERROR;
+		}
 		resp = _gsmReadResult();
 		if (resp == OK) {
 			gsmDebug("DONE\n");
