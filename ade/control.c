@@ -496,7 +496,7 @@ static inline void readMeter(uint8_t ch) {
 	ae = meter_ade7753_getEnergyLCAE();
 	chSetAE(ch, ae);
 
-	DB(kprintf("CH[%hd]: %08ld\r\n", ch, chData[ch].ae));
+	DB(kprintf("CH[%02hd]: %08ld\r\n", ch, chData[ch].ae));
 
 }
 #else
@@ -545,14 +545,14 @@ static inline void readMeter(uint8_t ch) {
 
 
 #if CONFIG_CONTROL_DEBUG
-	DB(LOG_INFO("CH[%hd] %c%c: Irms %08ld, Vrms %08ld => Prms %4.0fW (%08.3f)\r\n",
+	DB(LOG_INFO("CH[%02hd] %c%c: Irms %08ld, Vrms %08ld => Prms %4.0fW (%08.3f)\r\n",
 				ch+1, chUncalibrated(ch) ? 'C' : 'M',
 				chFaulted(ch) ? 'F' : 'S',
 				chGetIrms(ch), chGetVrms(ch),
 				chGetPrms(ch)/ADE_PWR_RATIO,
 				chGetPrms(ch)));
 #else
-	DB(LOG_INFO("CH[%hd] %c: %4.0f [W]\r\n",
+	DB(LOG_INFO("CH[%02hd] %c: %4.0f [W]\r\n",
 				ch+1, chUncalibrated(ch) ? 'C' : 'M',
 				chGetPrms(ch)/ADE_PWR_RATIO));
 #endif
@@ -589,7 +589,7 @@ static uint8_t sampleChannel(void) {
 	// switching
 	if (!CalibrationDone() &&
 			(activeChs & chCalib)) {
-		LOG_INFO("Uncalibrated CHs [0x%02X]\r\n", chCalib);
+		DB2(LOG_INFO("Uncalibrated CHs [0x%02X]\r\n", chCalib));
 		activeChs &= chCalib;
 		// Remain on current channel if it is _active_ and _uncalibrated_
 		if (activeChs & BV16(curCh))
@@ -707,14 +707,14 @@ static void calibrate(uint8_t ch) {
 	if (!chGetMoreSamples(ch) &&
 			chUncalibrated(ch)) {
 		// Mark channel as calibrated
-		kprintf("CH[%hd]: calibration DONE, %c: "LOAD_FORMAT"\r\n",
+		kprintf("CH[%02hd]: calibration DONE, %c: "LOAD_FORMAT"\r\n",
 				ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
 				chGetRMS(ch));
 		chMarkCalibrated(ch);
 		return;
 	}
 	
-	kprintf("CH[%hd]: %c(max,cur)=("LOAD_FORMAT", "LOAD_FORMAT" )...\r\n",
+	kprintf("CH[%02hd]: %c(max,cur)=("LOAD_FORMAT", "LOAD_FORMAT" )...\r\n",
 			ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
 			chGetMAX(ch), chGetRMS(ch));
 
@@ -727,7 +727,7 @@ static void calibrate(uint8_t ch) {
 	}
 
 	//----- Load increased... update current Imax -----
-	kprintf("CH[%hd]: calibrating...\r\n", ch+1);
+	kprintf("CH[%02hd]: calibrating...\r\n", ch+1);
 	chData[ch].calSamples = CONFIG_CALIBRATION_SAMPLES;
 
 	// Avoid recording load peak
@@ -756,16 +756,16 @@ static void calibrate(uint8_t ch) {
 	if (!chGetMoreSamples(ch) &&
 			chUncalibrated(ch)) {
 		// Mark channel as calibrated
-		kprintf("CH[%hd]: calibration DONE, %c: "LOAD_FORMAT"\r\n",
+		DB(LOG_INFO("CH[%02hd] Calibration DONE, %c: "LOAD_FORMAT"\r\n",
 				ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
-				chGetRMS(ch));
+				chGetRMS(ch)));
 		chMarkCalibrated(ch);
 		return;
 	}
 
-	kprintf("CH[%hd]: %c(max,cur)=("LOAD_FORMAT", "LOAD_FORMAT" )...\r\n",
+	DB2(LOG_INFO("CH[%02hd] %c(max,cur)=("LOAD_FORMAT", "LOAD_FORMAT" )...\r\n",
 			ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
-			chGetMAX(ch), chGetRMS(ch));
+			chGetMAX(ch), chGetRMS(ch)));
 
 	// Decrease calibration samples required
 	chMrkSample(ch);
@@ -781,8 +781,8 @@ static void calibrate(uint8_t ch) {
 
 	// Mark calibration if measure is too noise
 	if (var > minLoadVariation) {
-		kprintf("CH[%hd]: calibrating...\r\n", ch+1);
 		chData[ch].calSamples = CONFIG_CALIBRATION_SAMPLES;
+		DB(LOG_INFO("CH[%02hd] Calibrating...\r\n", ch+1));
 	}
 
 	// Keep track of current RMS value for both I and V
@@ -930,7 +930,7 @@ static void monitor(uint8_t ch) {
 
 	// Fault detected
 	rmode = FAULT;
-	kprintf("WARN: Load loss on CH[%hd] ("LOAD_FORMAT" => "LOAD_FORMAT")\r\n",
+	kprintf("\nWARN: Load loss on CH[%02hd] ("LOAD_FORMAT" => "LOAD_FORMAT")\r\n",
 		ch+1, chGetMAX(ch), chGetRMS(ch));
 
 	// Send SMS notification
@@ -977,7 +977,8 @@ static void checkSignals(void) {
 	}
 	// Checking for BUTTON
 	if (signal_pending(SIGNAL_PLAT_BUTTON)) {
-		DB2(LOG_INFO("USR BUTTON [%d]\r\n\n", signal_status(SIGNAL_PLAT_BUTTON)));
+		DB2(LOG_INFO("USR BUTTON [%d]\r\n\n",
+					signal_status(SIGNAL_PLAT_BUTTON)));
 		buttonHandler();
 	}
 }
