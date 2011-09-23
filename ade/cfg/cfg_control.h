@@ -53,6 +53,13 @@
 #define CONFIG_CONTROL_TESTING 	0
 
 /**
+ * Check this to enable FAULT levels reporting
+ *
+ * $WIZ$ type = "boolean"
+ */
+#define CONFIG_REPORT_FAULT_LEVELS   1
+
+/**
  * Number of consecutive and "stable" calibration samples
  *
  * $WIZ$ type = "int"

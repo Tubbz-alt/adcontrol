@@ -881,24 +881,53 @@ static void notifyAllBySMS(const char *msg) {
 
 static void notifyLoss(uint8_t ch) {
 	char *msg = cmdBuff;
-	uint8_t len;
+	uint8_t len = 0;
 
 	// Format SMS message
 	len = ee_getSmsText(msg, MAX_MSG_TEXT);
 
-	len += sprintf(msg+len, "\r\nAnomalia: CH%s(%hd)\r\nSemaforo: ",
+	len += snprintf(msg+len,
+			CMD_BUFFER_SIZE-len,
+			"\r\nAnomalia: CH%s(%hd)\r\nSemaforo: ",
 			isCritical(ch) ? " CRITICO" : "",
 			ch+1);
 	if (controlCriticalSpoiled()) {
-		len += sprintf(cmdBuff+len, "in LAMPEGGIO");
+		len += snprintf(cmdBuff+len,
+				CMD_BUFFER_SIZE-len,
+				"in LAMPEGGIO");
 	} else if (controlGetSpoiledMask()) {
-		len += sprintf(cmdBuff+len, "GUASTO");
+		len += snprintf(cmdBuff+len,
+				CMD_BUFFER_SIZE-len,
+				"GUASTO");
 	} else {
 		// This should never happens
-		len += sprintf(cmdBuff+len, "RFN FAULT?");
+		len += snprintf(cmdBuff+len,
+				CMD_BUFFER_SIZE-len,
+				"RFN FAULT?");
 	}
-	len += sprintf(msg+len, "\r\n%08ld => %08ld\r\n",
-			chData[ch].Imax, chData[ch].Irms);
+
+#if CONFIG_REPORT_FAULT_LEVELS
+#warning Reporting FAULTS LEVELS enabled
+	if (len+27 < CMD_BUFFER_SIZE) {
+		len += snprintf(msg+len,
+				CMD_BUFFER_SIZE-len,
+				"\r\n"
+				"P: %8.3f => %8.3f\r\n",
+				chData[ch].Pmax, chData[ch].Prms);
+	}
+	if (len+25 < CMD_BUFFER_SIZE) {
+		len += snprintf(msg+len,
+				CMD_BUFFER_SIZE-len,
+				"I: %8ld => %8ld\r\n",
+				chData[ch].Imax, chData[ch].Irms);
+	}
+	if (len+25 < CMD_BUFFER_SIZE) {
+		len += snprintf(msg+len,
+				CMD_BUFFER_SIZE-len,
+				"V: %8ld => %8ld\r\n",
+				chData[ch].Vmax, chData[ch].Vrms);
+	}
+#endif
 
 	// Send message by SMS to all enabled destination
 	notifyAllBySMS(msg);
