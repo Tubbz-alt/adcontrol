@@ -43,7 +43,7 @@
  *
  * $WIZ$ type = "boolean"
  */
-#define CONFIG_CONTROL_DEBUG   1
+#define CONFIG_CONTROL_DEBUG   0
 
 /**
  * Check this to enable GSM testing port
