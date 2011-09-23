@@ -84,6 +84,59 @@ MAKE_CMD(rst, "", "",
 	RC_OK;
 }), 0)
 
+//----- CMD: UPDATE INTERNAL PARAMETERS
+MAKE_CMD(ip, "ddddd", "",
+({
+	LOG_INFO("\n\nUpdate internal settings...\n");
+	
+	ee_setFaultSamples(args[1].l);
+	LOG_INFO(" Fault samples (S): %14hu\r\n",
+		ee_getFaultSamples());
+
+	ee_setFaultChecks(args[2].l);
+	LOG_INFO(" Fault checks (R): %15hu\r\n",
+		ee_getFaultChecks());
+
+	ee_setFaultCheckTime(args[3].l);
+	LOG_INFO(" Fault check time (T): %11u [s]\r\n",
+		ee_getFaultCheckTime());
+
+	ee_setFaultLevel(1000*args[4].l);
+	LOG_INFO(" Fault level (F): %16lu\r\n",
+		ee_getFaultLevel());
+
+	ee_setCalibrationWeeks(args[5].l);
+	LOG_INFO(" Calibration weeks (W): %10hu\r\n",
+		ee_getCalibrationWeeks());
+
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: SHOW INTERNAL PARAMETERS
+MAKE_CMD(vp, "", "s",
+({
+	snprintf(cmdBuff, CMD_BUFFER_SIZE,
+		"Parametri:\n"
+		"S: %hu\n"
+		"R: %hu\n"
+		"T: %u\n"
+		"F: %lu\n"
+		"W: %hu\n",
+		ee_getFaultSamples(),
+		ee_getFaultChecks(),
+		ee_getFaultCheckTime(),
+		ee_getFaultLevel(),
+		ee_getCalibrationWeeks()
+	);
+
+	LOG_INFO("\n\n%s\r\n\n", cmdBuff);
+	args[1].s = cmdBuff;
+
+	RC_OK;
+}), 0)
+;
+
 //----- CMD: Test SMS commands from console
 MAKE_CMD(test_sms, "t", "",
 ({
@@ -104,6 +157,7 @@ MAKE_CMD(test_sms, "t", "",
 
 	RC_OK;
 }), 0)
+;
 
 /*******************************************************************************
  * Configuration Commands
@@ -538,6 +592,8 @@ void command_init(void) {
 	REGISTER_CMD(ra);
 	REGISTER_CMD(ac);
 	REGISTER_CMD(rc);
+	REGISTER_CMD(ip);
+	REGISTER_CMD(vp);
 
 //----- Control commands
 	REGISTER_CMD(fc);
