@@ -222,7 +222,7 @@ void smsSplitAndParse(char const *from, char *sms) {
 
 // The countdown to GSM restat
 #define GSM_RESTART_COUNTDOWN (\
-		(uint32_t)GSM_RESTART_HOURES * 3600 / GSM_RESTART_HOURES)
+		(uint32_t)GSM_RESTART_HOURES * 3600 / SMS_CHECK_SEC)
 static uint32_t gsmRestartCountdown = GSM_RESTART_COUNTDOWN;
 
 // The task to process SMS events
