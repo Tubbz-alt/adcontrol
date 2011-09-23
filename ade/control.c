@@ -401,18 +401,6 @@ typedef enum running_modes {
 	MONITORING,
 } running_modes_t;
 
-typedef struct chData {
-	uint32_t Irms;
-	uint32_t Vrms;
-	double   Prms;
-	uint32_t Imax;
-	uint32_t Vmax;
-	double   Pmax;
-	int32_t ae;
-	uint8_t calSamples;
-	uint8_t fltSamples;
-} chData_t;
-
 /** The mask of channels to be monitored */
 uint16_t chEnabled = 0x0000;
 //#define ee_getEnabledChMask(V) ((uint16_t)0xFF00)
@@ -437,7 +425,7 @@ static running_modes_t rmode = CALIBRATION;
 uint16_t chCalib = 0xFFFF;
 
 /** The vector of channels data */
-static chData_t chData[MAX_CHANNELS];
+chData_t chData[MAX_CHANNELS];
 
 /** Control flasg */
 uint8_t controlFlags = CF_MONITORING;
@@ -865,11 +853,6 @@ static inline uint8_t chLoadLoss(uint8_t ch) {
 }
 #endif
 
-static inline uint8_t isCritical(uint8_t ch) {
-	if (chCritical & BV16(ch))
-		return 1;
-	return 0;
-}
 
 static void notifyAllBySMS(const char *msg) {
 	char dst[MAX_SMS_NUM];

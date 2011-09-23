@@ -74,6 +74,24 @@
 // The maximum number of channels
 #define MAX_CHANNELS 16
 
+typedef struct chData {
+	uint32_t Irms;
+	uint32_t Vrms;
+	double   Prms;
+	uint32_t Imax;
+	uint32_t Vmax;
+	double   Pmax;
+	int32_t ae;
+	uint8_t calSamples;
+	uint8_t fltChecks;
+	uint8_t fltSamples;
+} chData_t;
+
+extern chData_t chData[MAX_CHANNELS];
+
+
+
+
 void controlCalibration(void);
 void controlSetup(void);
 void controlLoop(void);
@@ -132,6 +150,13 @@ inline uint16_t controlCritical(void);
 inline uint16_t controlCritical(void) {
 	return chCritical;
 }
+inline uint8_t isCritical(uint8_t ch);
+inline uint8_t isCritical(uint8_t ch) {
+	if (chCritical & BV16(ch))
+		return 1;
+	return 0;
+}
+
 
 void controlNotifySpoiled(void);
 
