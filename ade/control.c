@@ -62,6 +62,10 @@ static uint8_t needCalibration(uint8_t ch);
 static void calibrate(uint8_t ch);
 
 static void notifyAllBySMS(const char *msg);
+static uint8_t chLoadLoss(uint8_t ch);
+static void chSetSuspendCountdown(void);
+static void chSetSpoiled(uint8_t ch);
+static uint8_t chCheckFault(uint8_t ch);
 static void monitor(uint8_t ch);
 
 // The list of timer shcedulated tasks
@@ -160,7 +164,7 @@ int8_t controlNotifyBySMS(const char *dest, const char *buff) {
 		result = gsmRegisterNetwork();
 		try++;
 	}
-	
+
 	// Trying to send the SMS
 	result = 0;
 	GSM(result = gsmSMSSend(dest, buff));
@@ -266,9 +270,7 @@ Event cmd_evt;
 
 // Forward declaration
 extern uint16_t chSuspended;
-#define CH_SUSPEND_TIMEOUT (CH_SUSPEND_SEC / CMD_CHECK_SEC)
-#define chSetSuspendCountdown() (chResumeCountdown = CH_SUSPEND_TIMEOUT)
-static uint8_t chResumeCountdown = CH_SUSPEND_TIMEOUT;
+static uint16_t chResumeCountdown = 0;
 
 // The task to process Console events
 static void cmd_task(iptr_t timer) {
@@ -281,10 +283,10 @@ static void cmd_task(iptr_t timer) {
 	console_run(&dbg_port.fd);
 
 	// Reset suspended CHs mask
-	if (!chResumeCountdown) {
+	if (!chResumeCountdown)
 		chSuspended = 0x0000;
-	}
-	chResumeCountdown--;
+	else
+		chResumeCountdown--;
 
 	// Reschedule this timer
 	synctimer_add(&cmd_tmr, &timers_lst);
@@ -346,7 +348,7 @@ static void btn_task(iptr_t timer) {
 #define CalibrationDone()     (!(chCalib & chEnabled))
 #define chGetMoreSamples(CH)  (chData[CH].calSamples)
 #define chMrkSample(CH)       (chData[CH].calSamples--)
-#define chRstSample(CH)       (chData[CH].calSamples = CONFIG_CALIBRATION_SAMPLES);
+#define chRstSample(CH)        chData[CH].calSamples = ee_getFaultSamples()
 
 #define chSetIrms(CH, IRMS)   (chData[CH].Irms = IRMS)
 #define chSetImax(CH, IMAX)   (chData[CH].Imax = IMAX)
@@ -367,8 +369,14 @@ static void btn_task(iptr_t timer) {
 #define chSetAE(CH, AE)       (chData[CH].ae = AE)
 #define chIncFaults(CH)        chData[CH].fltSamples++
 #define chGetFaults(CH)        chData[CH].fltSamples
-#define chRstFaults(CH)        chData[CH].fltSamples=0
+#define chRstFaults(CH)        chData[CH].fltSamples = 0
 #define chFaulted(CH)         (chData[CH].fltSamples)
+
+#define chIncChecks(CH)        chData[CH].fltChecks++
+#define chGetChecks(CH)        chData[CH].fltChecks
+#define chRstChecks(CH)        chData[CH].fltChecks = 0
+#define chChecks(CH)          (chData[CH].fltChecks)
+
 #define chMarkFault(CH)       (chFaulty |= BV16(CH))
 #define chMarkGood(CH)        (chFaulty &= ~BV16(CH))
 #define chSuspend(CH)         (chSuspended |= BV16(CH))
@@ -654,6 +662,7 @@ static inline void chRecalibrate(uint8_t ch) {
 	chSetVrms(ch, 0);
 	chSetPrms(ch, 0);
 	chMarkGood(ch);
+	chRstChecks(ch);
 	chRstFaults(ch);
 	chRstSample(ch);
 	chMarkUncalibrated(ch);
@@ -780,9 +789,9 @@ static void calibrate(uint8_t ch) {
 	}
 
 	// Mark calibration if measure is too noise
-	if (var > minLoadVariation) {
-		chData[ch].calSamples = CONFIG_CALIBRATION_SAMPLES;
+	if (var > (ee_getFaultLevel()/4)) {
 		DB(LOG_INFO("CH[%02hd] Calibrating...\r\n", ch+1));
+		chData[ch].calSamples = ee_getFaultSamples();
 	}
 
 	// Keep track of current RMS value for both I and V
@@ -800,7 +809,7 @@ static void calibrate(uint8_t ch) {
 
 #if 0
 #warning USING SINGLE-CHECK LOAD LOSS
-static inline uint8_t chLoadLoss(uint8_t ch) {
+static uint8_t chLoadLoss(uint8_t ch) {
 	uint32_t loadLoss;
 
 	if (chData[ch].Irms >= chData[ch].Imax)
@@ -814,21 +823,23 @@ static inline uint8_t chLoadLoss(uint8_t ch) {
 }
 #else
 #warning USING MULTI-CHECK LOAD LOSS
-static inline uint8_t chLoadLoss(uint8_t ch) {
+static uint8_t chLoadLoss(uint8_t ch) {
 	chLoad_t loadLoss;
 
 	// TODO we should consider increasing values, maybe to adapt the
 	// calibration to drift values, or new loads
 	if (chGetRMS(ch) >= chGetMAX(ch)) {
 		chMarkGood(ch);
+		chRstChecks(ch);
 		chRstFaults(ch);
 		return 0;
 	}
 
 	// Computing LOAD loss
 	loadLoss = chGetMAX(ch)-chGetRMS(ch);
-	if (loadLoss < loadFault) {
+	if (loadLoss < ee_getFaultLevel()) {
 		chMarkGood(ch);
+		chRstChecks(ch);
 		chRstFaults(ch);
 		return 0;
 	}
@@ -837,17 +848,9 @@ static inline uint8_t chLoadLoss(uint8_t ch) {
 	chMarkFault(ch);
 	chIncFaults(ch);
 
-	// Suspend the channel at halt faulty samples
-	if (chGetFaults(ch) == (CONFIG_FAULT_SAMPLES>>1)) {
-		chSuspend(ch);
-		// Schedule channel resume resume
-		chSetSuspendCountdown();
-	}
-
-	// Notify on faulty samples overflow
-	if (chGetFaults(ch)>CONFIG_FAULT_SAMPLES) {
+	// Notify on FAULTS count overflows
+	if (chGetFaults(ch) >= ee_getFaultSamples())
 		return 1;
-	}
 	
 	return 0;
 }
@@ -908,9 +911,41 @@ void controlNotifySpoiled(void) {
 	controlFlags |= CF_SPOILED;
 }
 
-inline void controlSetSpoiled(uint8_t ch);
-inline void controlSetSpoiled(uint8_t ch) {
+static void chSetSuspendCountdown(void) {
+	// Set the channels resume countdown ONLY if it is not already running
+	// This grants to resume in time with respect to the first faulty channel
+	// noticied.
+	if (chResumeCountdown)
+		return;
+	chResumeCountdown = (ee_getFaultCheckTime() / CMD_CHECK_SEC);
+}
+
+static void chSetSpoiled(uint8_t ch) {
+	// Suspend the channel until the next CHECK
+	chSuspend(ch);
+	// Schedule channel resume resume
+	chSetSuspendCountdown();
+	// Mark the channel as spoiled
 	chSpoiled |= BV16(ch);
+}
+
+static uint8_t chCheckFault(uint8_t ch) {
+
+	// Increas the fault CHECKS count
+	chIncChecks(ch);
+
+	// Notify on CHECKS count overflows 
+	if (chGetChecks(ch) >= ee_getFaultChecks())
+		return 1;
+
+	// Mark this channel as spoiled
+	chSetSpoiled(ch);
+
+	// Reset Samples count for next check
+	chRstFaults(ch);
+
+	// Notify the channel is not yet in FAULT
+	return 0;
 }
 
 /** @brief Defines the monitoring policy for each channel */
@@ -919,8 +954,8 @@ static void monitor(uint8_t ch) {
 	if (!chLoadLoss(ch))
 		return;
 
-	// Mark the channel as spoiled
-	controlSetSpoiled(ch);
+	if (!chCheckFault(ch))
+		return;
 
 	// Notify if a CRITICAL channel is spoiled
 	LOG_INFO("Crit: 0x%04X, ch: %d\r\n", chCritical, ch);
