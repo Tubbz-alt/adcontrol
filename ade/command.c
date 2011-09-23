@@ -443,20 +443,24 @@ MAKE_CMD(sc, "s", "s",
 	LOG_INFO("\n\n<= Stato canale [%s]\r\n\n", args[1].s);
 
 	ch = parseChannelNumber(args[1].s);
-	if (ch == 0)
-		return RC_ERROR;
-#if 0
-	len += sprintf(cmdBuff+len, "\r\nStato CH%s(%d):",
+	if (ch == 0 || ch > MAX_CHANNELS) {
+		len += sprintf(cmdBuff+len, "\r\nCH[%02d] non esistente\r\n", ch);
+		args[1].s = cmdBuff;
+		RC_OK;
+	}
+
+	// Scale channel number to array index
+	ch -= 1;
+	len += sprintf(cmdBuff+len, "\r\nStato CH%s(%02d):",
 			isCritical(ch) ? " CRITICO" : "", ch+1);
-	len += sprintf(cmdBuff+len, "\r\nImax: %08ld, Irms: %08ld",
-		chData[ch].Imax, chData[ch].Irms);
+	len += sprintf(cmdBuff+len, "\r\nPcal: %08.3f, Rrms: %08.3f",
+		chData[ch].Pmax, chData[ch].Prms);
 
 	LOG_INFO("\n\n##### Report Stato CH #######\n"
 			"%s\n"
 			"#############################\n\n",
 			cmdBuff);
 	args[1].s = cmdBuff;
-#endif
 
 	RC_OK;
 }), 0)
