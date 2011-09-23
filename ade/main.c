@@ -2,6 +2,7 @@
 #include "console.h"
 #include "eeprom.h"
 #include "control.h"
+#include "command.h"
 #include "signals.h"
 
 #include "gsm.h"
@@ -20,6 +21,7 @@
 #include <drv/ser.h>
 #include <drv/timer.h>
 
+#include <stdio.h>
 #include <verstag.h>
 
 static Serial spi_port;
@@ -29,8 +31,10 @@ Serial dbg_port;
 I2c i2c_bus;
 Pca9555 pe;
 
-// Reset status
+//=====[ Reset Reason Constrol ]================================================
 uint8_t rst_reason = 0;
+const char rst_reasons[] = "PEBWJ";
+
 void getResetReason(void);
 void getResetReason(void) {
       rst_reason = MCUSR;
@@ -38,7 +42,7 @@ void getResetReason(void) {
       wdt_disable();
 }
 
-const char rst_reasons[] = "PEBWJ";
+static void printResetReason(void);
 static void printResetReason(void) {
         kprintf("Reset reasons [0x%02X]: ", rst_reason);
 		for (uint8_t i = 0; i<5; i++) {
@@ -46,6 +50,24 @@ static void printResetReason(void) {
 				kprintf("%c", rst_reasons[i]);
 		} 
         kprintf("\r\n");
+}
+
+static void notifyPowerOn(void);
+static void notifyPowerOn(void) {
+	char *msg = cmdBuff;
+	uint8_t len;
+
+	// Format SMS message
+	len  = ee_getSmsText(msg, MAX_MSG_TEXT);
+	len += sprintf(msg+len, "\r\nAvvio RFN (0x%02X): ", rst_reason);
+	for (uint8_t i = 0; i < 5; i++) {
+		if (rst_reason & BV8(i))
+			len += sprintf(msg+len, "%c", rst_reasons[i]);
+	}
+
+	// Send message by SMS to all enabled destination
+	controlNotifyBySMS("+393473153808", msg);
+	//notifyAllBySMS(msg);
 }
 
 static void init(void) {
@@ -128,6 +150,11 @@ int main(void) {
 
 	/* Entering the main control loop */
 	controlSetup();
+
+	/* Notify restart reasons */
+	notifyPowerOn();
+
+	/* Main control loop */
 	while(1) {
 		controlLoop();
 	}
