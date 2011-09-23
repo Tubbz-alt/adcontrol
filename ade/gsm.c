@@ -378,6 +378,8 @@ static int8_t _gsmWrite(const char *cmd, size_t count)
 
 	// Purge any buffered data before sending a new command
 	ser_purge(gsm);
+	// Clear error flags
+	ser_setstatus(gsm, 0);
 
 	// Sending the AT command
 	WATCHDOG_RESET();
