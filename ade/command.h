@@ -8,6 +8,7 @@ void command_init(void);
 void command_parse(KFile *fd, const char *buf);
 
 /** The buffer defined by the GSM module */
-extern char cmdBuff[161];
+#define CMD_BUFFER_SIZE 161
+extern char cmdBuff[CMD_BUFFER_SIZE];
 
 #endif /* end of include guard: COMMANDS_H */

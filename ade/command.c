@@ -22,7 +22,7 @@
 #include <cfg/log.h>
 
 /** The buffer for command responces SMS formatting */
-char cmdBuff[161];
+char cmdBuff[CMD_BUFFER_SIZE];
 
 /*
  * Commands.
