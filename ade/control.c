@@ -60,6 +60,8 @@ static void cmd_task(iptr_t timer);
 static uint8_t sampleChannel(void);
 static uint8_t needCalibration(uint8_t ch);
 static void calibrate(uint8_t ch);
+
+static void notifyAllBySMS(const char *msg);
 static void monitor(uint8_t ch);
 
 // The list of timer shcedulated tasks
@@ -869,10 +871,30 @@ static inline uint8_t isCritical(uint8_t ch) {
 	return 0;
 }
 
-static void notifyLoss(uint8_t ch) {
+static void notifyAllBySMS(const char *msg) {
 	char dst[MAX_SMS_NUM];
+
+	LOG_INFO("\r\nSMS:\r\n%s\r\n\n", msg);
+
+	for (uint8_t idx = 1; idx <= MAX_SMS_DEST; ++idx) {
+		ee_getSmsDest(idx, dst, MAX_SMS_NUM);
+
+		// Jump disabled destination numbers
+		if (dst[0] != '+')
+			continue;
+
+		controlNotifyBySMS(dst, msg);
+	}
+
+	LOG_INFO("\n\n");
+
+	// Wait for SMS being delivered
+	DELAY(10000);
+
+}
+
+static void notifyLoss(uint8_t ch) {
 	char *msg = cmdBuff;
-	uint8_t idx;
 	uint8_t len;
 
 	// Format SMS message
@@ -892,22 +914,9 @@ static void notifyLoss(uint8_t ch) {
 	len += sprintf(msg+len, "\r\n%08ld => %08ld\r\n",
 			chData[ch].Imax, chData[ch].Irms);
 
-	LOG_INFO("\r\nSMS:\r\n%s\r\n\n", msg);
+	// Send message by SMS to all enabled destination
+	notifyAllBySMS(msg);
 
-	for (idx=0; idx<MAX_SMS_DEST; idx++) {
-		ee_getSmsDest(idx, dst, MAX_SMS_NUM);
-
-		// Jump disabled destination numbers
-		if (dst[0] != '+')
-			continue;
-
-		controlNotifyBySMS(dst, msg);
-	}
-		
-	LOG_INFO("\n\n", dst);
-
-	// Wait for SMS being delivered
-	DELAY(10000);
 }
 
 void controlNotifySpoiled(void) {
@@ -950,30 +959,16 @@ static void monitor(uint8_t ch) {
 }
 
 static void notifyFault(void) {
-	char dst[MAX_SMS_NUM];
 	char *msg = cmdBuff;
-	uint8_t idx;
 	uint8_t len;
 
 	// Format SMS message
 	len = ee_getSmsText(msg, MAX_MSG_TEXT);
 	sprintf(msg+len, "\r\nGuasto centralina RCT\r\n");
-	LOG_INFO("SMS: %s", msg);
 
-	for (idx=0; idx<MAX_SMS_DEST; idx++) {
-		ee_getSmsDest(idx, dst, MAX_SMS_NUM);
+	// Send message by SMS to all enabled destination
+	notifyAllBySMS(msg);
 
-		// Jump disabled destination numbers
-		if (dst[0] != '+')
-			continue;
-
-		controlNotifyBySMS(dst, msg);
-	}
-
-	LOG_INFO("\n\n");
-
-	// Wait for SMS being delivered
-	DELAY(10000);
 }
 
 static void buttonHandler(void) {
@@ -1005,9 +1000,7 @@ static void checkSignals(void) {
 }
 
 static void notifyCalibrationCompleted(void) {
-	char dst[MAX_SMS_NUM];
 	char *msg = cmdBuff;
-	uint8_t idx;
 	uint8_t len;
 
 	// Format SMS message
@@ -1023,22 +1016,9 @@ static void notifyCalibrationCompleted(void) {
 		len += sprintf(cmdBuff+len, "NON monitorato");
 	}
 
-	LOG_INFO("Sending Notification\n%s\n\n", msg);
+	// Send message by SMS to all enabled destination
+	notifyAllBySMS(msg);
 
-	for (idx=0; idx<MAX_SMS_DEST; idx++) {
-		ee_getSmsDest(idx, dst, MAX_SMS_NUM);
-
-		// Jump disabled destination numbers
-		if (dst[0] != '+')
-			continue;
-
-		controlNotifyBySMS(dst, msg);
-	}
-
-	LOG_INFO("\n\n");
-
-	// Wait for SMS being delivered
-	DELAY(10000);
 }
 
 #if CONFIG_CONTROL_TESTING 
