@@ -60,6 +60,7 @@ static void cmd_task(iptr_t timer);
 static uint8_t sampleChannel(void);
 static uint8_t needCalibration(uint8_t ch);
 static void calibrate(uint8_t ch);
+static void resetCalibrationCountdown(void);
 
 static void notifyAllBySMS(const char *msg);
 static uint8_t chLoadLoss(uint8_t ch);
@@ -272,6 +273,19 @@ Event cmd_evt;
 extern uint16_t chSuspended;
 static uint16_t chResumeCountdown = 0;
 
+// The countdown to GSM restat
+#define CLB_COUNTDOWN(WEEKS) (\
+		(uint32_t)WEEKS * 604800 / CMD_CHECK_SEC)
+static uint32_t recalibrationCountdown;
+
+static void resetCalibrationCountdown(void) {
+	uint8_t weeks = ee_getCalibrationWeeks();
+	// Try avoid misconfigured recaliations
+	if (!weeks)
+		weeks = 0xFF;
+	recalibrationCountdown = CLB_COUNTDOWN(weeks);
+}
+
 // The task to process Console events
 static void cmd_task(iptr_t timer) {
 //static void cmd_task(struct Event *evt) {
@@ -287,6 +301,14 @@ static void cmd_task(iptr_t timer) {
 		chSuspended = 0x0000;
 	else
 		chResumeCountdown--;
+
+	// Check for periodic re-calibration
+	recalibrationCountdown--;
+	if (!recalibrationCountdown) {
+		resetCalibrationCountdown();
+		LOG_INFO("\n\n!!!!! Ri-calibrazione periodica !!!!!\n\n");
+		controlCalibration();
+	}
 
 	// Reschedule this timer
 	synctimer_add(&cmd_tmr, &timers_lst);
@@ -1141,6 +1163,9 @@ void controlSetup(void) {
 
 	// Update signal level
 	GSM(updateCSQ());
+
+	// Setup Re-Calibration Weeks
+	resetCalibrationCountdown();
 
 	// Enabling the watchdog for the control loop
 	WATCHDOG_ENABLE();
