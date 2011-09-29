@@ -501,6 +501,18 @@ static inline void resetMeter(void) {
 			*ADE_LINE_CYCLES_SAMPLE_COUNT);
 }
 
+static inline void setPower(uint8_t ch) {
+#if CONFIG_MONITOR_POWER
+	// Compute RMS Power from V and I
+	chSetPrms(ch, (((double)chGetIrms(ch)*chGetVrms(ch))/100000));
+#else
+#warning Monitoring RMS Current (Irms) only
+	// Compute RMS Power from V and I
+	// 230V => Vrms~=1M 
+	chSetPrms(ch, ((double)chGetIrms(ch)*10));
+#endif
+}
+
 static inline void readMeter(uint8_t ch) {
 	static uint8_t prevAdeCh = 0xFF;
 
@@ -521,8 +533,8 @@ static inline void readMeter(uint8_t ch) {
 		chSetIrms(ch) = chGetIrms(ch)-ADE_IRMS_OFFSET;
 #endif
 
-	// Compute RMS Power
-	chSetPrms(ch, (((double)chGetIrms(ch)*chGetVrms(ch))/100000));
+	// Update the Power RMS value for this channel
+	setPower(ch);
 
 #if CONFIG_CONTROL_TESTING
 	kprintf("CH: %02hd, Irms: %08ld, Vrms: %08ld, Prms: %4.0f (%08.3f)\r\n",
