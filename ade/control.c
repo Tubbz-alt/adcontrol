@@ -403,26 +403,12 @@ static void btn_task(iptr_t timer) {
 #define chMarkGood(CH)        (chFaulty &= ~BV16(CH))
 #define chSuspend(CH)         (chSuspended |= BV16(CH))
 
-#if CONFIG_MONITOR_POWER
-typedef double 				chLoad_t;
-# define LOAD_FORMAT 		"%08.3f"
-# define chGetRMS(CH) 		chGetPrms(CH)
-# define chGetMAX(CH) 		chGetPmax(CH)
+/** The CHs load value */
+typedef double chLoad_t;
 /** The minimum load loss to notify a FAULT */
 const double loadFault = ADE_PRMS_LOAD_FAULT/2;
 /** The minimum load variation for calibration  */
 const double minLoadVariation = ADE_PRMS_LOAD_FAULT/2;
-#else
-typedef uint32_t 			chLoad_t;
-# define LOAD_FORMAT 		"%08ld"
-# define chGetRMS(CH) 		chGetIrms(CH)
-# define chGetMAX(CH) 		chGetImax(CH)
-/** The minimum load loss to notify a FAULT */
-const uint32_t loadFault = ADE_IRMS_LOAD_FAULT;
-/** The minimum load variation for calibration  */
-const uint32_t minLoadVariation = (
-		ADE_IRMS_LOAD_FAULT>>ADE_LOAD_CALIBRATION_FACTOR);
-#endif
 
 /** @brief The RFN running modes */
 typedef enum running_modes {
@@ -708,27 +694,27 @@ static void calibrate(uint8_t ch) {
 	if (!chGetMoreSamples(ch) &&
 			chUncalibrated(ch)) {
 		// Mark channel as calibrated
-		DB(LOG_INFO("CH[%02hd] Calibration DONE, %c: "LOAD_FORMAT"\r\n",
+		DB(LOG_INFO("CH[%02hd] Calibration DONE, %c: %08.3f\r\n",
 				ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
-				chGetRMS(ch)));
+				chGetPrms(ch)));
 		chMarkCalibrated(ch);
 		return;
 	}
 
-	DB2(LOG_INFO("CH[%02hd] %c(max,cur)=("LOAD_FORMAT", "LOAD_FORMAT" )...\r\n",
+	DB2(LOG_INFO("CH[%02hd] %c(max,cur)=(%08.3f, %08.3f)...\r\n",
 			ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
-			chGetMAX(ch), chGetRMS(ch)));
+			chGetPmax(ch), chGetPrms(ch)));
 
 	// Decrease calibration samples required
 	chMrkSample(ch);
 
 	// Update load measure (by half of the variation)
-	if (chGetMAX(ch) >= chGetRMS(ch)) {
-		var = chGetMAX(ch)-chGetRMS(ch);
-		chGetMAX(ch) -= (var/2);
+	if (chGetPmax(ch) >= chGetPrms(ch)) {
+		var = chGetPmax(ch)-chGetPrms(ch);
+		chGetPmax(ch) -= (var/2);
 	} else {
-		var = chGetRMS(ch)-chGetMAX(ch);
-		chGetMAX(ch) += (var/2);
+		var = chGetPrms(ch)-chGetPmax(ch);
+		chGetPmax(ch) += (var/2);
 	}
 
 	// Mark calibration if measure is too noise
@@ -737,12 +723,9 @@ static void calibrate(uint8_t ch) {
 		chData[ch].calSamples = ee_getFaultSamples();
 	}
 
-	// Keep track of current RMS value for both I and V
-#if CONFIG_MONITOR_POWER
+	// Keep track of current RMS values
 	chSetImax(ch, chGetIrms(ch));
-#else
 	chSetPmax(ch, chGetPrms(ch));
-#endif
 	chSetVmax(ch, chGetVrms(ch));
 
 }
@@ -754,7 +737,7 @@ static uint8_t chLoadLoss(uint8_t ch) {
 
 	// TODO we should consider increasing values, maybe to adapt the
 	// calibration to drift values, or new loads
-	if (chGetRMS(ch) >= chGetMAX(ch)) {
+	if (chGetPrms(ch) >= chGetPmax(ch)) {
 		chMarkGood(ch);
 		chRstChecks(ch);
 		chRstFaults(ch);
@@ -762,7 +745,7 @@ static uint8_t chLoadLoss(uint8_t ch) {
 	}
 
 	// Computing LOAD loss
-	loadLoss = chGetMAX(ch)-chGetRMS(ch);
+	loadLoss = chGetPmax(ch)-chGetPrms(ch);
 	if (loadLoss < ee_getFaultLevel()) {
 		chMarkGood(ch);
 		chRstChecks(ch);
@@ -918,8 +901,8 @@ static void monitor(uint8_t ch) {
 
 	// Fault detected
 	rmode = FAULT;
-	kprintf("\nWARN: Load loss on CH[%02hd] ("LOAD_FORMAT" => "LOAD_FORMAT")\r\n",
-		ch+1, chGetMAX(ch), chGetRMS(ch));
+	kprintf("\nWARN: Load loss on CH[%02hd] (%08.3f => %08.3f)\r\n",
+		ch+1, chGetPmax(ch), chGetPrms(ch));
 
 	// Send SMS notification
 	notifyLoss(ch);
