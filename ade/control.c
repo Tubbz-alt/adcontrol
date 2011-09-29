@@ -701,56 +701,6 @@ void controlCalibration(void) {
 	}
 }
 
-#if 0
-# warning USING INCREASING ONLY CALIBRATION
-/** @brief Defines the calibration policy for each channel */
-static void calibrate(uint8_t ch) {
-
-	if (!chGetMoreSamples(ch) &&
-			chUncalibrated(ch)) {
-		// Mark channel as calibrated
-		kprintf("CH[%02hd]: calibration DONE, %c: "LOAD_FORMAT"\r\n",
-				ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
-				chGetRMS(ch));
-		chMarkCalibrated(ch);
-		return;
-	}
-	
-	kprintf("CH[%02hd]: %c(max,cur)=("LOAD_FORMAT", "LOAD_FORMAT" )...\r\n",
-			ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
-			chGetMAX(ch), chGetRMS(ch));
-
-	// Decrease calibration samples required
-	chMrkSample(ch);
-
-	if (chGetMAX(ch) >= chGetRMS(ch)) {
-		// TODO better verify to avoid being masked by a load peak
-		return;
-	}
-
-	//----- Load increased... update current Imax -----
-	kprintf("CH[%02hd]: calibrating...\r\n", ch+1);
-	chData[ch].calSamples = CONFIG_CALIBRATION_SAMPLES;
-
-	// Avoid recording load peak
-	if ((chGetRMS(ch)-chGetMAX(ch)) > loadFault) {
-		chGetMAX(ch) += (loadFault/2);
-		return;
-	}
-
-	chGetMAX(ch) = chGetRMS(ch);
-
-	// Keep track of current RMS value for both I and V
-#if CONFIG_MONITOR_POWER
-	chSetImax(ch, chGetIrms(ch));
-#else
-	chSetPmax(ch, chGetPrms(ch));
-#endif
-	chSetVmax(ch, chGetVrms(ch));
-
-}
-#else
-# warning USING BI-SEARCH CALIBRATION
 /** @brief Defines the calibration policy for each channel */
 static void calibrate(uint8_t ch) {
 	chLoad_t var;
@@ -796,7 +746,6 @@ static void calibrate(uint8_t ch) {
 	chSetVmax(ch, chGetVrms(ch));
 
 }
-#endif
 
 //=====[ Channel Monitoring ]===================================================
 
