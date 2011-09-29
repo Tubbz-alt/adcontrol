@@ -749,22 +749,6 @@ static void calibrate(uint8_t ch) {
 
 //=====[ Channel Monitoring ]===================================================
 
-#if 0
-#warning USING SINGLE-CHECK LOAD LOSS
-static uint8_t chLoadLoss(uint8_t ch) {
-	uint32_t loadLoss;
-
-	if (chData[ch].Irms >= chData[ch].Imax)
-		return 0;
-
-	loadLoss = chData[ch].Imax-chData[ch].Irms;
-	if ( loadLoss > loadFault)
-		return 1;
-
-	return 0;
-}
-#else
-#warning USING MULTI-CHECK LOAD LOSS
 static uint8_t chLoadLoss(uint8_t ch) {
 	chLoad_t loadLoss;
 
@@ -796,8 +780,6 @@ static uint8_t chLoadLoss(uint8_t ch) {
 	
 	return 0;
 }
-#endif
-
 
 static void notifyAllBySMS(const char *msg) {
 	char dst[MAX_SMS_NUM];
