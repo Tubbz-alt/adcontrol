@@ -502,34 +502,6 @@ static inline void switchAnalogMux(uint8_t ch) {
 
 }
 
-#if 0
-static inline void resetMeter(void) {
-	LOG_INFO("Reset ADE7753\r\n");
-	// Reset the meter
-	meter_ade7753_reset();
-	DELAY(20);
-	// Set LCAE
-	meter_ade7753_setLCEA(500);
-
-}
-
-static inline void readMeter(uint8_t ch) {
-	static uint8_t prevCh = 17;
-	int32_t ae;
-
-	if (ch != prevCh) {
-		resetMeter();
-		prevCh = ch;
-	}
-
-	// Get Energy accumulation value
-	ae = meter_ade7753_getEnergyLCAE();
-	chSetAE(ch, ae);
-
-	DB(kprintf("CH[%02hd]: %08ld\r\n", ch, chData[ch].ae));
-
-}
-#else
 static inline void resetMeter(void) {
 
 	// Reset the meter
@@ -588,7 +560,6 @@ static inline void readMeter(uint8_t ch) {
 #endif
 
 }
-#endif
 
 static uint8_t curCh = MAX_CHANNELS-1;
 /** @brief Get a Power measure and return the measured channel */
