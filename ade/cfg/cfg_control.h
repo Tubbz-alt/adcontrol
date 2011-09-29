@@ -117,7 +117,7 @@
  *
  * $WIZ$ type = "boolean"
  */
-#define CONFIG_MONITOR_POWER 1
+#define CONFIG_MONITOR_POWER 0
 
 /**
  * Module logging level.
