@@ -255,17 +255,17 @@ void ee_loadConf(void) {
 	LOG_INFO("EEPROM Conf:\r\n");
 	DELAY(5);
 
-	// Dump SMS destinations
-	for (i=1; i<=MAX_SMS_DEST; i++) {
-		ee_getSmsDest(i, buff, MAX_SMS_NUM);
-		LOG_INFO(" SMS [%d]: %s\r\n", i, buff);
-		DELAY(5);
-	}
-
 	// Dump SMS message
 	ee_getSmsText(buff, MAX_MSG_TEXT);
 	LOG_INFO(" SMS Text: %s\r\n", buff);
 	DELAY(5);
+
+	// Dump SMS destinations
+	for (i=1; i<=MAX_SMS_DEST; i++) {
+		ee_getSmsDest(i, buff, MAX_SMS_NUM);
+		LOG_INFO(" GSM%d: %10s%s\r\n", i, space, buff);
+		DELAY(5);
+	}
 
 	pConf->enabledChannelsMask = eeprom_read_word(
 			(uint16_t*)&eeconf.enabledChannelsMask);
