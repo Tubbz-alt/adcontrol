@@ -164,18 +164,18 @@ MAKE_CMD(test_sms, "t", "",
  ******************************************************************************/
 
 //----- CMD: NUMBER ADD
-MAKE_CMD(an, "ds", "",
+MAKE_CMD(ag, "ds", "",
 ({
-	LOG_INFO("\n\n<= Aggiungi Numero %ld) %s)\r\n\n",
+	LOG_INFO("\n\n<= Aggiungi GSM %ld) %s)\r\n\n",
 		args[1].l, args[2].s);
 	ee_setSmsDest(args[1].l, args[2].s);
 	RC_OK;
 }), 0)
 
 //----- CMD: NUMBER DEL
-MAKE_CMD(cn, "d", "",
+MAKE_CMD(rg, "d", "",
 ({
-	LOG_INFO("\n\n<= Rimuovi numero %ld)\r\n\n",
+	LOG_INFO("\n\n<= Rimuovi GSM %ld)\r\n\n",
 		args[1].l);
 	ee_setSmsDest(args[1].l, EMPTY_NUMBER);
 	RC_OK;
@@ -183,7 +183,7 @@ MAKE_CMD(cn, "d", "",
 ;
 
 //----- CMD: NUMBER SHOW
-MAKE_CMD(vn, "", "s",
+MAKE_CMD(vg, "", "s",
 ({
 	char buff[MAX_SMS_NUM];
 	uint8_t len = 0;
@@ -217,7 +217,7 @@ MAKE_CMD(ii, "t", "",
 ;
 
 //----- CMD: MESSAGE GET
-MAKE_CMD(li, "", "s",
+MAKE_CMD(vi, "", "s",
 ({
 	char buff[MAX_MSG_TEXT];
 
@@ -587,11 +587,11 @@ void command_init(void) {
 	REGISTER_CMD(help);
 
 //----- Configuration commands
-	REGISTER_CMD(an);
-	REGISTER_CMD(cn);
-	REGISTER_CMD(vn);
+	REGISTER_CMD(ag);
+	REGISTER_CMD(rg);
+	REGISTER_CMD(vg);
 	REGISTER_CMD(ii);
-	REGISTER_CMD(li);
+	REGISTER_CMD(vi);
 	REGISTER_CMD(aa);
 	REGISTER_CMD(ra);
 	REGISTER_CMD(ac);
