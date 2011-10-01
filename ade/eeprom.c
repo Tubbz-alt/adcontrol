@@ -28,7 +28,10 @@ eeprom_conf_t EEMEM eeconf = {
 	.faultSamples = CONFIG_FAULT_SAMPLES,
 	.faultChecks = CONFIG_FAULT_CHECKS,
 	.faultCheckTime = CONFIG_FAULT_CHECK_TIME,
+
 	.faultLevel = (uint32_t)1000 * CONFIG_FAULT_LEVEL,
+	.flCalibrationDiv = 8,
+	.flDetectionDiv = 2,
 
 	.calibWeeks = CONFIG_CALIBRATION_WEEKS,
 
@@ -198,6 +201,27 @@ void     ee_setFaultLevel(uint32_t fLevel) {
 	pConf->faultLevel = fLevel;
 }
 
+uint8_t ee_getFlCalibrationDiv(void) {
+	return pConf->flCalibrationDiv;
+}
+
+void ee_setFlCalibrationDiv(uint8_t cdiv) {
+	eeprom_update_byte(
+			(uint8_t*)&eeconf.flCalibrationDiv,
+			cdiv);
+	pConf->flCalibrationDiv = cdiv;
+}
+
+uint8_t ee_getFlDetectionDiv(void) {
+	return pConf->flDetectionDiv;
+}
+
+void ee_setFlDetectionDiv(uint8_t ddiv) {
+	eeprom_update_byte(
+			(uint8_t*)&eeconf.flDetectionDiv,
+			ddiv);
+	pConf->flDetectionDiv = ddiv;
+}
 
 uint8_t  ee_getCalibrationWeeks(void) {
 	return pConf->calibWeeks;
@@ -277,6 +301,18 @@ void ee_loadConf(void) {
 			(uint32_t*)&eeconf.faultLevel);
 	LOG_INFO(" Fault level: %16lu\r\n",
 			pConf->faultLevel);
+	DELAY(5);
+
+	pConf->flCalibrationDiv = eeprom_read_byte(
+			(uint8_t*)&eeconf.flCalibrationDiv);
+	LOG_INFO(" Fault level CDIV: %11hu\r\n",
+			pConf->flCalibrationDiv);
+	DELAY(5);
+
+	pConf->flDetectionDiv = eeprom_read_byte(
+			(uint8_t*)&eeconf.flDetectionDiv);
+	LOG_INFO(" Fault level DDIV: %11hu\r\n",
+			pConf->flDetectionDiv);
 	DELAY(5);
 
 	pConf->calibWeeks = eeprom_read_byte(

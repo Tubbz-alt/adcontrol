@@ -28,8 +28,13 @@ typedef struct eeprom_conf {
 	uint8_t faultChecks;
 	/** Number of seconds between faults checks */
 	uint16_t faultCheckTime;
+
 	/** Fault (Power) detection level */
 	uint32_t faultLevel;
+	/** Fault level detection divider */
+	uint8_t flDetectionDiv;
+	/** Fault levelcalibration divider */
+	uint8_t flCalibrationDiv;
 
 	/** Weeks between recalibrations */
 	uint8_t calibWeeks;
@@ -59,8 +64,13 @@ typedef struct runtime_conf {
 	uint8_t faultChecks;
 	/** Number of seconds between faults checks */
 	uint16_t faultCheckTime;
+
 	/** Fault (Power) detection level */
 	uint32_t faultLevel;
+	/** Fault levelcalibration divider */
+	uint8_t flCalibrationDiv;
+	/** Fault level detection divider */
+	uint8_t flDetectionDiv;
 
 	/** Weeks between recalibrations */
 	uint8_t calibWeeks;
@@ -87,9 +97,13 @@ uint16_t ee_getFaultCheckTime(void);
 void     ee_setFaultCheckTime(uint16_t);
 uint32_t ee_getFaultLevel(void);
 void     ee_setFaultLevel(uint32_t);
+uint8_t  ee_getFlCalibrationDiv(void);
+void     ee_setFlCalibrationDiv(uint8_t);
+uint8_t  ee_getFlDetectionDiv(void);
+void     ee_setFlDetectionDiv(uint8_t);
+
 uint8_t  ee_getCalibrationWeeks(void);
 void     ee_setCalibrationWeeks(uint8_t);
-
 
 uint8_t  ee_getNotifyFlags(void);
 void     ee_setNotifyFlags(uint8_t mask);
