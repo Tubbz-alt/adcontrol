@@ -736,7 +736,7 @@ static void calibrate(uint8_t ch) {
 	}
 
 	// Mark calibration if measure is too noise
-	if (var > (ee_getFaultLevel()/4)) {
+	if (var > (ee_getFaultLevel()/ee_getFlCalibrationDiv())) {
 		DB(LOG_INFO("CH[%02hd] Calibrating...\r\n", ch+1));
 		chData[ch].calSamples = ee_getFaultSamples();
 	}
@@ -763,7 +763,7 @@ static uint8_t chLoadLoss(uint8_t ch) {
 
 	// Computing LOAD loss
 	loadLoss = chGetPmax(ch)-chGetPrms(ch);
-	if (loadLoss < ee_getFaultLevel()) {
+	if (loadLoss < (ee_getFaultLevel()/ee_getFlDetectionDiv())) {
 		chMarkGood(ch);
 		chRstChecks(ch);
 		chRstFaults(ch);
