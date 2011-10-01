@@ -54,8 +54,12 @@ static void printResetReason(void) {
 
 static void notifyPowerOn(void);
 static void notifyPowerOn(void) {
+	char dst[MAX_SMS_NUM];
 	char *msg = cmdBuff;
 	uint8_t len;
+
+	if (!ee_onNotifyReboot())
+		return;
 
 	// Format SMS message
 	len  = ee_getSmsText(msg, MAX_MSG_TEXT);
@@ -66,8 +70,8 @@ static void notifyPowerOn(void) {
 	}
 
 	// Send message by SMS to all enabled destination
-	controlNotifyBySMS("+393473153808", msg);
-	//notifyAllBySMS(msg);
+	ee_getSmsDest(1, dst, MAX_SMS_NUM);
+	controlNotifyBySMS(dst, msg);
 }
 
 //=====[ Stack Usage Monitoring ]===============================================
