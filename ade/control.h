@@ -74,13 +74,16 @@
 // The maximum number of channels
 #define MAX_CHANNELS 16
 
+/** The CHs load value */
+typedef uint32_t chLoad_t;
+
 typedef struct chData {
 	uint32_t Irms;
 	uint32_t Vrms;
-	double   Prms;
+	chLoad_t Prms;
 	uint32_t Imax;
 	uint32_t Vmax;
-	double   Pmax;
+	chLoad_t Pmax;
 	uint8_t calSamples;
 	uint8_t fltChecks;
 	uint8_t fltSamples;

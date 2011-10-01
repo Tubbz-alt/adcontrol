@@ -403,8 +403,6 @@ static void btn_task(iptr_t timer) {
 #define chMarkGood(CH)        (chFaulty &= ~BV16(CH))
 #define chSuspend(CH)         (chSuspended |= BV16(CH))
 
-/** The CHs load value */
-typedef double chLoad_t;
 /** The minimum load loss to notify a FAULT */
 const double loadFault = ADE_PRMS_LOAD_FAULT/2;
 /** The minimum load variation for calibration  */
@@ -537,7 +535,7 @@ static inline void readMeter(uint8_t ch) {
 	setPower(ch);
 
 #if CONFIG_CONTROL_TESTING
-	kprintf("CH: %02hd, Irms: %08ld, Vrms: %08ld, Prms: %4.0f (%08.3f)\r\n",
+	kprintf("CH: %02hd, Irms: %08ld, Vrms: %08ld, Prms: %4ld (%08ld)\r\n",
 			ch+1, chGetIrms(ch), chGetVrms(ch),
 			chGetPrms(ch)/ADE_PWR_RATIO, chGetPrms(ch));
 	return;
@@ -545,14 +543,14 @@ static inline void readMeter(uint8_t ch) {
 
 
 #if CONFIG_CONTROL_DEBUG
-	DB(LOG_INFO("CH[%02hd] %c%c: Irms %08ld, Vrms %08ld => Prms %4.0fW (%08.3f)\r\n",
+	DB(LOG_INFO("CH[%02hd] %c%c: Irms %08ld, Vrms %08ld => Prms %4ldW (%10ld)\r\n",
 				ch+1, chUncalibrated(ch) ? 'C' : 'M',
 				chFaulted(ch) ? 'F' : 'S',
 				chGetIrms(ch), chGetVrms(ch),
 				chGetPrms(ch)/ADE_PWR_RATIO,
 				chGetPrms(ch)));
 #else
-	DB(LOG_INFO("CH[%02hd] %c: %4.0f [W]\r\n",
+	DB(LOG_INFO("CH[%02hd] %c: %4ld [W]\r\n",
 				ch+1, chUncalibrated(ch) ? 'C' : 'M',
 				chGetPrms(ch)/ADE_PWR_RATIO));
 #endif
@@ -706,14 +704,14 @@ static void calibrate(uint8_t ch) {
 	if (!chGetMoreSamples(ch) &&
 			chUncalibrated(ch)) {
 		// Mark channel as calibrated
-		DB(LOG_INFO("CH[%02hd] Calibration DONE, %c: %08.3f\r\n",
+		DB(LOG_INFO("CH[%02hd] Calibration DONE, %c(cal,rms)=(%08ld,%08ld)\r\n",
 				ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
-				chGetPrms(ch)));
+				chGetPmax(ch), chGetPrms(ch)));
 		chMarkCalibrated(ch);
 		return;
 	}
 
-	DB2(LOG_INFO("CH[%02hd] %c(max,cur)=(%08.3f, %08.3f)...\r\n",
+	DB2(LOG_INFO("CH[%02hd] %c(cal,rms)=(%08ld, %08ld)...\r\n",
 			ch+1, CONFIG_MONITOR_POWER ? 'P' : 'I',
 			chGetPmax(ch), chGetPrms(ch)));
 
@@ -831,7 +829,7 @@ static void notifyLoss(uint8_t ch) {
 		len += snprintf(msg+len,
 				CMD_BUFFER_SIZE-len,
 				"\r\n"
-				"P: %8.3f => %8.3f\r\n",
+				"P: %8ld => %8ld\r\n",
 				chData[ch].Pmax, chData[ch].Prms);
 	}
 	if (len+25 < CMD_BUFFER_SIZE) {
@@ -913,7 +911,7 @@ static void monitor(uint8_t ch) {
 
 	// Fault detected
 	rmode = FAULT;
-	kprintf("\nWARN: Load loss on CH[%02hd] (%08.3f => %08.3f)\r\n",
+	kprintf("\nWARN: Load loss on CH[%02hd] (%08ld => %08ld)\r\n",
 		ch+1, chGetPmax(ch), chGetPrms(ch));
 
 	// Send SMS notification

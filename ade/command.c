@@ -499,7 +499,7 @@ MAKE_CMD(sc, "s", "s",
 	ch -= 1;
 	len += sprintf(cmdBuff+len, "\r\nStato CH%s(%02d):",
 			isCritical(ch) ? " CRITICO" : "", ch+1);
-	len += sprintf(cmdBuff+len, "\r\nPcal: %08.3f, Rrms: %08.3f",
+	len += sprintf(cmdBuff+len, "\r\nPcal: %08ld, Prms: %08ld",
 		chData[ch].Pmax, chData[ch].Prms);
 
 	LOG_INFO("\n\n##### Report Stato CH #######\n"
