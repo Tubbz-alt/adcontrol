@@ -34,6 +34,11 @@ typedef struct eeprom_conf {
 	/** Weeks between recalibrations */
 	uint8_t calibWeeks;
 
+	/** Notification flags */
+#define EE_NOTIFY_REBOOT 		0
+#define EE_NOTIFY_CALIBRATION 	1
+	uint8_t notifyFlags;
+
 } eeprom_conf_t;
 
 
@@ -60,6 +65,9 @@ typedef struct runtime_conf {
 	/** Weeks between recalibrations */
 	uint8_t calibWeeks;
 
+	/** Notification flags */
+	uint8_t notifyFlags;
+
 } runtime_conf_t;
 
 int8_t  ee_getSmsDest(uint8_t pos, char *num, uint8_t count);
@@ -81,6 +89,18 @@ uint32_t ee_getFaultLevel(void);
 void     ee_setFaultLevel(uint32_t);
 uint8_t  ee_getCalibrationWeeks(void);
 void     ee_setCalibrationWeeks(uint8_t);
+
+
+uint8_t  ee_getNotifyFlags(void);
+void     ee_setNotifyFlags(uint8_t mask);
+inline uint8_t  ee_onNotifyReboot(void);
+inline uint8_t  ee_onNotifyReboot(void) {
+	return (ee_getNotifyFlags() & BV8(EE_NOTIFY_REBOOT));
+}
+inline uint8_t  ee_onNotifyCalibration(void);
+inline uint8_t  ee_onNotifyCalibration(void) {
+	return (ee_getNotifyFlags() & BV8(EE_NOTIFY_CALIBRATION));
+}
 
 extern runtime_conf_t *pConf;
 

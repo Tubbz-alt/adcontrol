@@ -31,6 +31,8 @@ eeprom_conf_t EEMEM eeconf = {
 	.faultLevel = (uint32_t)1000 * CONFIG_FAULT_LEVEL,
 
 	.calibWeeks = CONFIG_CALIBRATION_WEEKS,
+
+	.notifyFlags = BV8(EE_NOTIFY_CALIBRATION),
 };
 
 // The on RAM configuration (for run-time use)
@@ -209,11 +211,22 @@ void     ee_setCalibrationWeeks(uint8_t cWeeks) {
 }
 
 
+uint8_t  ee_getNotifyFlags(void) {
+	return pConf->notifyFlags;
+}
+
+void     ee_setNotifyFlags(uint8_t mask) {
+	eeprom_update_byte(
+			(uint8_t*)&eeconf.notifyFlags,
+			mask);
+	pConf->notifyFlags = mask;
+}
 
 
 void ee_loadConf(void) {
 	uint8_t i;
 	char buff[MAX_MSG_TEXT];
+	char space[] = " ";
 
 	LOG_INFO("EEPROM Conf:\r\n");
 	DELAY(5);
@@ -233,13 +246,13 @@ void ee_loadConf(void) {
 	pConf->enabledChannelsMask = eeprom_read_word(
 			(uint16_t*)&eeconf.enabledChannelsMask);
 	LOG_INFO(" Enabled CHs:  %9s0x%04X\r\n",
-			" ", pConf->enabledChannelsMask);
+			space, pConf->enabledChannelsMask);
 	DELAY(5);
 
 	pConf->criticalChannelsMask = eeprom_read_word(
 			(uint16_t*)&eeconf.criticalChannelsMask);
 	LOG_INFO(" Critical CHs: %9s0x%04X\r\n",
-			" ", pConf->criticalChannelsMask);
+			space, pConf->criticalChannelsMask);
 	DELAY(5);
 
 	pConf->faultSamples = eeprom_read_byte(
@@ -270,6 +283,12 @@ void ee_loadConf(void) {
 			(uint8_t*)&eeconf.calibWeeks);
 	LOG_INFO(" Calibration weeks: %10hu\r\n",
 			pConf->calibWeeks);
+	DELAY(5);
+
+	pConf->notifyFlags = eeprom_read_byte(
+			(uint8_t*)&eeconf.notifyFlags);
+	LOG_INFO(" Notification flags: %5s0x%02X\r\n",
+			space, pConf->notifyFlags);
 	DELAY(5);
 
 }
