@@ -81,7 +81,6 @@ typedef struct chData {
 	uint32_t Imax;
 	uint32_t Vmax;
 	double   Pmax;
-	int32_t ae;
 	uint8_t calSamples;
 	uint8_t fltChecks;
 	uint8_t fltSamples;
