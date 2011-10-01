@@ -354,10 +354,6 @@ static void btn_task(iptr_t timer) {
 	LED_NOTIFY_OFF();
 	ERR_OFF();
 
-	// Reset spoiled channels mask
-	controlFlags &= ~CF_SPOILED;
-	chSpoiled = 0x0000;
-
 	controlCalibration();
 
 }
@@ -696,6 +692,14 @@ void controlSetEnabled(uint16_t mask) {
 void controlCalibration(void) {
 
 	LOG_WARN("Forcing re-calibration\r\n\n");
+
+	// Reset spoiled channels mask
+	controlFlags &= ~CF_SPOILED;
+	chSpoiled = 0x0000;
+
+	// Reset suspended channels mask
+	chSuspended = 0x0000;
+
 	for (uint8_t ch=0; ch<16; ch++) {
 		chRecalibrate(ch);
 	}
