@@ -970,6 +970,9 @@ static void notifyCalibrationCompleted(void) {
 	char *msg = cmdBuff;
 	uint8_t len;
 
+	if (!ee_onNotifyCalibration())
+		return;
+
 	// Format SMS message
 	len = ee_getSmsText(msg, MAX_MSG_TEXT);
 	len += sprintf(msg+len, "\nCalibrazione completata\nSemaforo ");
