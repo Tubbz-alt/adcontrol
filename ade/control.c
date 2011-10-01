@@ -733,9 +733,8 @@ static void calibrate(uint8_t ch) {
 		chData[ch].calSamples = ee_getFaultSamples();
 	}
 
-	// Keep track of current RMS values
+	// Keep track of others RMS values
 	chSetImax(ch, chGetIrms(ch));
-	chSetPmax(ch, chGetPrms(ch));
 	chSetVmax(ch, chGetVrms(ch));
 
 }
