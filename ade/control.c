@@ -57,6 +57,7 @@
 
 static void sms_task(iptr_t timer);
 static void cmd_task(iptr_t timer);
+static void readMeter(uint8_t ch);
 static uint8_t sampleChannel(void);
 static uint8_t needCalibration(uint8_t ch);
 static void calibrate(uint8_t ch);
@@ -484,6 +485,9 @@ static inline void switchAnalogMux(uint8_t ch) {
 	DB2(LOG_INFO("Switch Ch: %d => 0x%02X\r\n",
 				ch, chSelectionMap[ch]));
 
+	// Read one sample to trow away fauly ready from previous channel
+	readMeter(ch);
+
 }
 
 static inline void resetMeter(void) {
@@ -511,7 +515,7 @@ static inline void setPower(uint8_t ch) {
 #endif
 }
 
-static inline void readMeter(uint8_t ch) {
+static void readMeter(uint8_t ch) {
 	static uint8_t prevAdeCh = 0xFF;
 
 	if (ch != prevAdeCh) {
