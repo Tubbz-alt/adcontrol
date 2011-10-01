@@ -73,7 +73,7 @@
  * $WIZ$ min = "16"
  * $WIZ$ max = "255"
  */
-#define CONFIG_FAULT_SAMPLES 64
+#define CONFIG_FAULT_SAMPLES 32
 
 /**
  * Number of faults detections before an alarm is triggered
@@ -91,7 +91,7 @@
  * $WIZ$ min = "1"
  * $WIZ$ max = "65535"
  */
-#define CONFIG_FAULT_CHECK_TIME 180
+#define CONFIG_FAULT_CHECK_TIME 300
 
 /**
  * Default faulty level (K)
