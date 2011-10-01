@@ -1075,6 +1075,10 @@ void controlSetup(void) {
 	// Enabling the watchdog for the control loop
 	WATCHDOG_ENABLE();
 
+	// Initi the analog MUX to current channel
+	switchAnalogMux(curCh);
+
+
 }
 
 static char progress[] = "/|\\-";
