@@ -137,6 +137,52 @@ MAKE_CMD(vp, "", "s",
 }), 0)
 ;
 
+//----- CMD: SET NOTIFICATIONS FLAGS
+MAKE_CMD(in, "t", "",
+({
+ 	const char *flags = args[1].s;
+	uint8_t mask = 0x00;
+
+	LOG_INFO("\n\nUpdate notification settings...\n");
+
+	// Set all flags in order
+	for (uint8_t f = 0x01; *flags != ' ' && *flags; f<<=1, ++flags) {
+		if (*flags == '0')
+			continue;
+		mask |= f;
+	}
+
+	ee_setNotifyFlags(mask);
+	LOG_INFO(" Notify Flags (AC): %02X\r\n",
+		ee_getNotifyFlags());
+
+	RC_OK;
+}), 0)
+;
+
+//----- CMD: SHOW NOTIFICATION FLAGS
+MAKE_CMD(vn, "", "s",
+({
+ 	char space[] = " ";
+	char on[] = "ON";
+	char off[] = "OFF";
+
+	snprintf(cmdBuff, CMD_BUFFER_SIZE,
+		"Notifiche:\n"
+		"  Avvio: %7s%s\n"
+		"  Calibrazione: %s\n",
+		space,
+		ee_onNotifyReboot() ? on : off,
+		ee_onNotifyCalibration() ? on : off
+	);
+
+	LOG_INFO("\n\n%s\r\n\n", cmdBuff);
+	args[1].s = cmdBuff;
+
+	RC_OK;
+}), 0)
+;
+
 //----- CMD: Test SMS commands from console
 MAKE_CMD(test_sms, "t", "",
 ({
@@ -598,6 +644,8 @@ void command_init(void) {
 	REGISTER_CMD(rc);
 	REGISTER_CMD(ip);
 	REGISTER_CMD(vp);
+	REGISTER_CMD(in);
+	REGISTER_CMD(vn);
 
 //----- Control commands
 	REGISTER_CMD(fc);
