@@ -85,7 +85,7 @@ MAKE_CMD(rst, "", "",
 }), 0)
 
 //----- CMD: UPDATE INTERNAL PARAMETERS
-MAKE_CMD(ip, "ddddd", "",
+MAKE_CMD(ip, "ddddddd", "",
 ({
 	LOG_INFO("\n\nUpdate internal settings...\n");
 	
@@ -105,7 +105,15 @@ MAKE_CMD(ip, "ddddd", "",
 	LOG_INFO(" Fault level (F): %16lu\r\n",
 		ee_getFaultLevel());
 
-	ee_setCalibrationWeeks(args[5].l);
+	ee_setFlCalibrationDiv(args[5].l);
+	LOG_INFO(" Fault level CDIV (C): %11hu\r\n",
+		ee_getFlCalibrationDiv());
+
+	ee_setFlDetectionDiv(args[6].l);
+	LOG_INFO(" Fault level DDIV (D): %11hu\r\n",
+		ee_getFlDetectionDiv());
+
+	ee_setCalibrationWeeks(args[7].l);
 	LOG_INFO(" Calibration weeks (W): %10hu\r\n",
 		ee_getCalibrationWeeks());
 
@@ -122,11 +130,15 @@ MAKE_CMD(vp, "", "s",
 		"R: %hu\n"
 		"T: %u\n"
 		"F: %lu\n"
+		"C: %hu\n"
+		"D: %hu\n"
 		"W: %hu\n",
 		ee_getFaultSamples(),
 		ee_getFaultChecks(),
 		ee_getFaultCheckTime(),
-		ee_getFaultLevel(),
+		ee_getFaultLevel()/1000,
+		ee_getFlCalibrationDiv(),
+		ee_getFlDetectionDiv(),
 		ee_getCalibrationWeeks()
 	);
 
