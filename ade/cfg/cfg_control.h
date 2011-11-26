@@ -73,7 +73,7 @@
  * $WIZ$ min = "16"
  * $WIZ$ max = "255"
  */
-#define CONFIG_FAULT_SAMPLES 32
+#define CONFIG_FAULT_SAMPLES 64
 
 /**
  * Number of faults detections before an alarm is triggered
@@ -100,7 +100,7 @@
  * $WIZ$ min = "1"
  * $WIZ$ max = "65535"
  */
-#define CONFIG_FAULT_LEVEL 160
+#define CONFIG_FAULT_LEVEL 110
 
 /**
  * Number of weeks among forced re-calibration
