@@ -803,7 +803,7 @@ static void notifyAllBySMS(const char *msg) {
 
 }
 
-static void notifyLoss(uint8_t ch) {
+static void notifyChFault(uint8_t ch) {
 	char *msg = cmdBuff;
 	uint8_t len = 0;
 
@@ -922,7 +922,7 @@ static void monitor(uint8_t ch) {
 		ch+1, chGetPmax(ch), chGetPrms(ch));
 
 	// Send SMS notification
-	notifyLoss(ch);
+	notifyChFault(ch);
 
 	// Mark channel for recalibration
 	chRecalibrate(ch);
