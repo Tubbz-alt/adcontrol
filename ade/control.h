@@ -101,6 +101,7 @@ void controlLoop(void);
 extern uint8_t controlFlags;
 #define CF_MONITORING 		0x01
 #define CF_SPOILED 			0x02
+#define CF_FAULTED 			0x04
 
 inline void controlEnableMonitoring(void);
 inline void controlEnableMonitoring(void) {
@@ -124,6 +125,17 @@ inline uint16_t controlGetSpoiledMask(void) {
 inline uint8_t controlCriticalSpoiled(void);
 inline uint8_t controlCriticalSpoiled(void) {
 	return (controlFlags & CF_SPOILED);
+}
+
+extern uint16_t chFaulted;
+inline uint16_t controlGetFaultedMask(void);
+inline uint16_t controlGetFaultedMask(void) {
+	return chFaulted;
+}
+
+inline uint8_t controlCriticalFaulted(void);
+inline uint8_t controlCriticalFaulted(void) {
+	return (controlFlags & CF_FAULTED);
 }
 
 void controlSetEnabled(uint16_t mask);

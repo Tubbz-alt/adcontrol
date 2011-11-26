@@ -397,6 +397,7 @@ static void btn_task(iptr_t timer) {
 #define chChecks(CH)          (chData[CH].lossyChecks)
 
 #define chMarkLossy(CH)       (chLossy |= BV16(CH))
+#define chMarkFaulted(CH)     (chFaulted |= BV16(CH))
 #define chMarkGood(CH)        (chLossy &= ~BV16(CH))
 #define chSuspend(CH)         (chSuspended |= BV16(CH))
 
@@ -423,8 +424,11 @@ uint16_t chCritical = 0x0000;
 /** The mask of channels with fault samples */
 static uint16_t chLossy = 0x0000;
 
-/** The mask of channels in fault state */
+/** The mask of channels in spoiled state */
 uint16_t chSpoiled = 0x0000;
+
+/** The mask of channels in fault state */
+uint16_t chFaulted = 0x0000;
 
 /** The mask of suspended channels */
 uint16_t chSuspended = 0x0000;
@@ -696,6 +700,10 @@ void controlCalibration(void) {
 	// Reset spoiled channels mask
 	controlFlags &= ~CF_SPOILED;
 	chSpoiled = 0x0000;
+
+	// Reset faulted channels mask
+	controlFlags &= ~CF_FAULTED;
+	chFaulted = 0x0000;
 
 	// Reset suspended channels mask
 	chSuspended = 0x0000;
