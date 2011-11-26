@@ -823,11 +823,11 @@ static void notifyChFault(uint8_t ch) {
 			"\r\nAnomalia: CH%s(%hd)\r\nSemaforo: ",
 			isCritical(ch) ? " CRITICO" : "",
 			ch+1);
-	if (controlCriticalSpoiled()) {
+	if (controlCriticalFaulted()) {
 		len += snprintf(cmdBuff+len,
 				CMD_BUFFER_SIZE-len,
 				"in LAMPEGGIO");
-	} else if (controlGetSpoiledMask()) {
+	} else if (controlGetFaultedMask()) {
 		len += snprintf(cmdBuff+len,
 				CMD_BUFFER_SIZE-len,
 				"GUASTO");
@@ -866,10 +866,10 @@ static void notifyChFault(uint8_t ch) {
 
 }
 
-void controlNotifySpoiled(void) {
+void controlNotifyFaulted(void) {
 	// Light-up Fault LED (and switch the Relè)
 	ERR_ON();
-	controlFlags |= CF_SPOILED;
+	controlFlags |= CF_FAULTED;
 }
 
 static void chSetSuspendCountdown(void) {
@@ -918,10 +918,13 @@ static void monitor(uint8_t ch) {
 	if (!chCheckFault(ch))
 		return;
 
-	// Notify if a CRITICAL channel is spoiled
+	// Mark the channel as FAULTED
+	chMarkFaulted(ch);
+
+	// Notify if a CRITICAL channel is faulted
 	LOG_INFO("Crit: 0x%04X, ch: %d\r\n", chCritical, ch);
 	if (chCritical & BV16(ch)) { //isCritical(ch)) {
-		controlNotifySpoiled();
+		controlNotifyFaulted();
 	}
 
 	// Fault detected

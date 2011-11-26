@@ -172,7 +172,7 @@ inline uint8_t isCritical(uint8_t ch) {
 }
 
 
-void controlNotifySpoiled(void);
+void controlNotifyFaulted(void);
 
 void smsSplitAndParse(char const *from, char *sms);
 
