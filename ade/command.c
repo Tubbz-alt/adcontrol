@@ -487,7 +487,7 @@ MAKE_CMD(fl, "", "",
 	//Silence "args not used" warning.
 	(void)args;
 	LOG_INFO("\n\n<= Lampeggio Forzato\n\n");
-	controlNotifySpoiled();
+	controlNotifyFaulted();
 	RC_OK;
 }), 0)
 ;
@@ -533,9 +533,9 @@ MAKE_CMD(rs, "", "s",
 	int len = 0;
 
 	len += sprintf(cmdBuff+len, "STATO ");
-	if (controlCriticalSpoiled()) {
+	if (controlCriticalFaulted()) {
 		len += sprintf(cmdBuff+len, "LAMP");
-	} else if (controlGetSpoiledMask() ||
+	} else if (controlGetFaultedMask() ||
 				signal_status(SIGNAL_UNIT_IRQ)) {
 		len += sprintf(cmdBuff+len, "GUAS");
 	} else if (controlIsCalibrating()) {
@@ -547,7 +547,7 @@ MAKE_CMD(rs, "", "s",
 	}
 
 	len += sprintf(cmdBuff+len, "\r\nCF");
-	mask = controlGetSpoiledMask();
+	mask = controlGetFaultedMask();
 	if (!mask)
 		len += sprintf(cmdBuff+len, " Nessuno");
 	for (pos = 1; mask && pos <= 16; ++pos, mask>>=1) {
