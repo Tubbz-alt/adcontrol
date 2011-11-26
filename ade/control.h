@@ -85,8 +85,8 @@ typedef struct chData {
 	uint32_t Vmax;
 	chLoad_t Pmax;
 	uint8_t calSamples;
-	uint8_t fltChecks;
-	uint8_t fltSamples;
+	uint8_t lossyChecks;
+	uint8_t lossySamples;
 } chData_t;
 
 extern chData_t chData[MAX_CHANNELS];

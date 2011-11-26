@@ -386,18 +386,18 @@ static void btn_task(iptr_t timer) {
 #define chGetPmax(CH)          chData[CH].Pmax
 
 #define chSetAE(CH, AE)       (chData[CH].ae = AE)
-#define chIncFaults(CH)        chData[CH].fltSamples++
-#define chGetFaults(CH)        chData[CH].fltSamples
-#define chRstFaults(CH)        chData[CH].fltSamples = 0
-#define chFaulted(CH)         (chData[CH].fltSamples)
+#define chIncLossy(CH)         chData[CH].lossySamples++
+#define chGetLossy(CH)         chData[CH].lossySamples
+#define chRstLossy(CH)         chData[CH].lossySamples = 0
+#define chLossy(CH)           (chData[CH].lossySamples)
 
-#define chIncChecks(CH)        chData[CH].fltChecks++
-#define chGetChecks(CH)        chData[CH].fltChecks
-#define chRstChecks(CH)        chData[CH].fltChecks = 0
-#define chChecks(CH)          (chData[CH].fltChecks)
+#define chIncChecks(CH)        chData[CH].lossyChecks++
+#define chGetChecks(CH)        chData[CH].lossyChecks
+#define chRstChecks(CH)        chData[CH].lossyChecks = 0
+#define chChecks(CH)          (chData[CH].lossyChecks)
 
-#define chMarkFault(CH)       (chFaulty |= BV16(CH))
-#define chMarkGood(CH)        (chFaulty &= ~BV16(CH))
+#define chMarkLossy(CH)       (chLossy |= BV16(CH))
+#define chMarkGood(CH)        (chLossy &= ~BV16(CH))
 #define chSuspend(CH)         (chSuspended |= BV16(CH))
 
 /** The minimum load loss to notify a FAULT */
@@ -421,7 +421,7 @@ uint16_t chEnabled = 0x0000;
 uint16_t chCritical = 0x0000;
 
 /** The mask of channels with fault samples */
-static uint16_t chFaulty = 0x0000;
+static uint16_t chLossy = 0x0000;
 
 /** The mask of channels in fault state */
 uint16_t chSpoiled = 0x0000;
@@ -545,7 +545,7 @@ static void readMeter(uint8_t ch) {
 #if CONFIG_CONTROL_DEBUG
 	DB(LOG_INFO("CH[%02hd] %c%c: Irms %08ld, Vrms %08ld => Prms %4ldW (%10ld)\r\n",
 				ch+1, chUncalibrated(ch) ? 'C' : 'M',
-				chFaulted(ch) ? 'F' : 'S',
+				chLossy(ch) ? 'L' : 'S',
 				chGetIrms(ch), chGetVrms(ch),
 				chGetPrms(ch)/ADE_PWR_RATIO,
 				chGetPrms(ch)));
@@ -570,10 +570,10 @@ static uint8_t sampleChannel(void) {
 	// If some _active_ channels are in fault mode: focus just on them only
 	// This allows to reduce FAULTS DETECTION time perhaps also avoiding channel
 	// switching
-	if (chFaulty &&
-			(activeChs & chFaulty)) {
-		LOG_INFO("Faulty CHs [0x%02X]\r\n", chFaulty);
-		activeChs &= chFaulty;
+	if (chLossy &&
+			(activeChs & chLossy)) {
+		LOG_INFO("Lossy CHs [0x%02X]\r\n", chLossy);
+		activeChs &= chLossy;
 		// Remain on current channel if it is _active_ and _faulty_
 		if (activeChs & BV16(curCh))
 			goto sample;
@@ -652,7 +652,7 @@ static inline void chRecalibrate(uint8_t ch) {
 	chSetPrms(ch, 0);
 	chMarkGood(ch);
 	chRstChecks(ch);
-	chRstFaults(ch);
+	chRstLossy(ch);
 	chRstSample(ch);
 	chMarkUncalibrated(ch);
 }
@@ -757,7 +757,7 @@ static uint8_t chLoadLoss(uint8_t ch) {
 	if (chGetPrms(ch) >= chGetPmax(ch)) {
 		chMarkGood(ch);
 		chRstChecks(ch);
-		chRstFaults(ch);
+		chRstLossy(ch);
 		return 0;
 	}
 
@@ -766,16 +766,16 @@ static uint8_t chLoadLoss(uint8_t ch) {
 	if (loadLoss < (ee_getFaultLevel()/ee_getFlDetectionDiv())) {
 		chMarkGood(ch);
 		chRstChecks(ch);
-		chRstFaults(ch);
+		chRstLossy(ch);
 		return 0;
 	}
 
 	// Faults detection
-	chMarkFault(ch);
-	chIncFaults(ch);
+	chMarkLossy(ch);
+	chIncLossy(ch);
 
 	// Notify on FAULTS count overflows
-	if (chGetFaults(ch) >= ee_getFaultSamples())
+	if (chGetLossy(ch) >= ee_getFaultSamples())
 		return 1;
 	
 	return 0;
@@ -895,7 +895,7 @@ static uint8_t chCheckFault(uint8_t ch) {
 	chSetSpoiled(ch);
 
 	// Reset Samples count for next check
-	chRstFaults(ch);
+	chRstLossy(ch);
 
 	// Notify the channel is not yet in FAULT
 	return 0;
