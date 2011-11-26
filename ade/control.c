@@ -397,6 +397,7 @@ static void btn_task(iptr_t timer) {
 #define chChecks(CH)          (chData[CH].lossyChecks)
 
 #define chMarkLossy(CH)       (chLossy |= BV16(CH))
+#define chMarkSpoiled(CH)     (chSpoiled |= BV16(CH))
 #define chMarkFaulted(CH)     (chFaulted |= BV16(CH))
 #define chMarkGood(CH)        (chLossy &= ~BV16(CH))
 #define chSuspend(CH)         (chSuspended |= BV16(CH))
@@ -887,7 +888,7 @@ static void chSetSpoiled(uint8_t ch) {
 	// Schedule channel resume resume
 	chSetSuspendCountdown();
 	// Mark the channel as spoiled
-	chSpoiled |= BV16(ch);
+	chMarkSpoiled(ch);
 }
 
 static uint8_t chCheckFault(uint8_t ch) {
